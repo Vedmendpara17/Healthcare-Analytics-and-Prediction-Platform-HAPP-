@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+
+{% block title %}Doctor Dashboard | Healthcare System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0">Welcome, Dr. {{ doctor.user.get_full_name }}</h3>
+            <p class="text-muted small m-0">{{ doctor.specialization.name|default:"General Practice" }} | {{ doctor.hospital_name }}</p>
+        </div>
+        <a href="{% url 'create_risk_assessment' %}" class="btn btn-brand-primary rounded-3">
+            <i class="bi bi-clipboard-pulse me-1"></i> New Risk Assessment
+        </a>
+    </div>
+
+    <!-- Stat Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card d-flex align-items-center gap-3">
+                <div class="stat-icon bg-primary-subtle text-primary">
+                    <i class="bi bi-calendar-event-fill"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Today's Appointments</div>
+                    <div class="fs-3 fw-bold">{{ todays_appointments.count }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card d-flex align-items-center gap-3">
+                <div class="stat-icon bg-warning-subtle text-warning">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Pending Requests</div>
+                    <div class="fs-3 fw-bold">{{ pending_appointments.count }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card d-flex align-items-center gap-3">
+                <div class="stat-icon bg-success-subtle text-success">
+                    <i class="bi bi-person-lines-fill"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Assigned Patients</div>
+                    <div class="fs-3 fw-bold">{{ doctor_patients_count }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card d-flex align-items-center gap-3">
+                <div class="stat-icon bg-danger-subtle text-danger">
+                    <i class="bi bi-activity"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">High Risk Patients</div>
+                    <div class="fs-3 fw-bold text-danger">{{ high_risk }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Today's Schedule -->
+        <div class="col-lg-7">
+            <div class="card-custom p-4 mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3.5 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="bg-teal-subtle text-teal rounded-3 p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background-color: #e6f4f1; color: #0f766e;">
+                            <i class="bi bi-calendar2-check-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold m-0 font-heading">Today's Appointment Schedule</h5>
+                            <span class="text-muted small">Real-time consultation queue & status updates</span>
+                        </div>
+                    </div>
+                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill fw-semibold small">
+                        <i class="bi bi-clock-history me-1.5 text-teal" style="color: #0f766e;"></i>{% now "l, M d, Y" %}
+                    </span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Time Slot</th>
+                                <th>Patient</th>
+                                <th>Reason for Visit</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in todays_appointments %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-light text-dark border px-2.5 py-1.5 rounded-3 fw-semibold">
+                                            <i class="bi bi-clock me-1 text-primary"></i>{{ app.get_time_slot_display_text }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2.5">
+                                            <div class="patient-avatar">
+                                                {{ app.patient.first_name|first|default:app.patient.username|first|upper }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark mb-0">{{ app.patient.get_full_name|default:app.patient.username }}</div>
+                                                <span class="text-muted small">ID: #{{ app.patient.id }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-secondary small line-clamp-2" title="{{ app.reason }}">
+                                            {{ app.reason|truncatechars:45 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if app.status == 'APPROVED' %}
+                                            <span class="app-status-pill status-approved"><i class="bi bi-check-circle-fill me-1"></i>Approved</span>
+                                        {% elif app.status == 'PENDING' %}
+                                            <span class="app-status-pill status-pending"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                                        {% elif app.status == 'RESCHEDULED' %}
+                                            <span class="app-status-pill status-rescheduled"><i class="bi bi-arrow-repeat me-1"></i>Rescheduled</span>
+                                        {% elif app.status == 'COMPLETED' %}
+                                            <span class="app-status-pill status-completed"><i class="bi bi-check-all me-1"></i>Completed</span>
+                                        {% else %}
+                                            <span class="app-status-pill status-cancelled"><i class="bi bi-x-circle-fill me-1"></i>{{ app.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-3 px-3 fw-medium" type="button" data-bs-toggle="dropdown">
+                                                Manage
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3">
+                                                {% if app.status == 'PENDING' or app.status == 'RESCHEDULED' %}
+                                                    <li>
+                                                        <form method="post" action="{% url 'update_appointment_status' app.id %}">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="status" value="APPROVED">
+                                                            <button type="submit" class="dropdown-item text-success fw-medium py-2"><i class="bi bi-check-circle me-2"></i>Approve Appointment</button>
+                                                        </form>
+                                                    </li>
+                                                {% endif %}
+                                                <li>
+                                                    <a href="{% url 'add_prescription' app.id %}" class="dropdown-item text-primary fw-medium py-2"><i class="bi bi-file-earmark-medical me-2"></i>Issue Prescription</a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <form method="post" action="{% url 'update_appointment_status' app.id %}">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="status" value="CANCELLED">
+                                                        <button type="submit" class="dropdown-item text-danger fw-medium py-2"><i class="bi bi-x-circle me-2"></i>Cancel Consultation</button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-5">
+                                        <div class="d-inline-flex bg-light text-secondary rounded-circle p-3 mb-3">
+                                            <i class="bi bi-calendar-check fs-2"></i>
+                                        </div>
+                                        <div class="fw-bold text-dark mb-1">No Consultations Scheduled Today</div>
+                                        <p class="small text-muted mb-0">Your schedule for today is completely open.</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pending Requests -->
+            {% if pending_appointments %}
+                <div class="card-custom p-4">
+                    <h5 class="fw-bold mb-3 text-warning"><i class="bi bi-exclamation-circle me-2"></i>Pending Appointment Requests</h5>
+                    <div class="list-group list-group-flush">
+                        {% for app in pending_appointments %}
+                            <div class="list-group-item px-0 py-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-bold">{{ app.patient.get_full_name }}</div>
+                                    <small class="text-muted"><i class="bi bi-calendar me-1"></i>{{ app.date }} at {{ app.get_time_slot_display_text }}</small>
+                                    <div class="small text-muted italic">"{{ app.reason }}"</div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <!-- Approve -->
+                                    <form method="post" action="{% url 'update_appointment_status' app.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="APPROVED">
+                                        <button type="submit" class="btn btn-success btn-sm rounded-3"><i class="bi bi-check-lg me-1"></i>Approve</button>
+                                    </form>
+
+                                    <!-- Reschedule Modal Trigger -->
+                                    <button type="button" class="btn btn-outline-warning btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#rescheduleModal{{ app.id }}">
+                                        <i class="bi bi-clock-history me-1"></i>Reschedule
+                                    </button>
+
+                                    <!-- Reject Modal Trigger -->
+                                    <button type="button" class="btn btn-outline-danger btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#rejectModal{{ app.id }}">
+                                        <i class="bi bi-x-lg me-1"></i>Reject
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Reschedule Modal -->
+                            <div class="modal fade" id="rescheduleModal{{ app.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content border-0 shadow">
+                                        <div class="modal-header bg-warning-subtle">
+                                            <h5 class="modal-title fw-bold text-dark"><i class="bi bi-clock-history me-2"></i>Reschedule Appointment #{{ app.id }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form method="post" action="{% url 'update_appointment_status' app.id %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="status" value="RESCHEDULED">
+                                            <div class="modal-body">
+                                                <p class="small text-muted mb-3">Rescheduling appointment for <strong>{{ app.patient.get_full_name }}</strong>. An automated update email will be sent to the patient.</p>
+                                                
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold small">New Appointment Date</label>
+                                                    <input type="date" name="new_date" value="{{ app.date|date:'Y-m-d' }}" class="form-control" required>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold small">New Time Slot</label>
+                                                    <select name="new_time_slot" class="form-select" required>
+                                                        {% for slot_code, slot_label in app.TIME_SLOT_CHOICES %}
+                                                            <option value="{{ slot_code }}" {% if slot_code == app.time_slot %}selected{% endif %}>{{ slot_label }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold small">Note for Patient (Optional)</label>
+                                                    <textarea name="reschedule_note" class="form-control" rows="2" placeholder="Explain reason for rescheduling..."></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-warning fw-semibold">Save & Send Reschedule Email</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reject Modal -->
+                            <div class="modal fade" id="rejectModal{{ app.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content border-0 shadow">
+                                        <div class="modal-header bg-danger-subtle">
+                                            <h5 class="modal-title fw-bold text-danger"><i class="bi bi-x-circle me-2"></i>Reject Appointment #{{ app.id }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form method="post" action="{% url 'update_appointment_status' app.id %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="status" value="REJECTED">
+                                            <div class="modal-body">
+                                                <p class="small text-muted mb-3">Please state the reason for declining this request from <strong>{{ app.patient.get_full_name }}</strong>. This explanation will be emailed to the patient.</p>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold small">Reason for Rejection</label>
+                                                    <textarea name="rejection_reason" class="form-control" rows="3" placeholder="e.g. Schedule conflict, out of office, specialized referral required..." required></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-danger fw-semibold">Decline & Send Email</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Risk Assessments -->
+        <div class="col-lg-5">
+            <div class="card-custom p-4 h-100">
+                <h5 class="fw-bold mb-3"><i class="bi bi-activity text-brand-primary me-2"></i>Recent Clinical Risk Evaluations</h5>
+                <div class="list-group list-group-flush">
+                    {% for a in recent_assessments %}
+                        <div class="list-group-item px-0 py-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold">{{ a.patient.user.get_full_name }}</div>
+                                <small class="text-muted">{{ a.created_at|date:"M d, Y" }} | Score: {{ a.computed_score }}/100</small>
+                            </div>
+                            <div>
+                                <span class="risk-badge badge-{% if a.final_level == 'LOW' %}low{% elif a.final_level == 'MEDIUM' %}medium{% else %}high{% endif %} me-2">
+                                    {{ a.final_level }}
+                                </span>
+                                <a href="{% url 'assessment_detail' a.id %}" class="btn btn-sm btn-link text-brand-primary">Detail</a>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-center text-muted py-4">No risk assessments submitted yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

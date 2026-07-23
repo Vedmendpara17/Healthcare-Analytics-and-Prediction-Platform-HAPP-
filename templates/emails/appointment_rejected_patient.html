@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Appointment Update - Not Approved</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .header { border-bottom: 2px solid #ef4444; padding-bottom: 16px; margin-bottom: 24px; }
+        .header h2 { color: #dc2626; margin: 0; font-size: 22px; }
+        .badge { display: inline-block; background-color: #fee2e2; color: #dc2626; font-weight: 600; padding: 4px 12px; border-radius: 9999px; font-size: 13px; }
+        .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .details-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        .details-table td.label { font-weight: 600; color: #64748b; width: 35%; }
+        .reason-box { background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #991b1b; }
+        .btn { display: inline-block; background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; margin-top: 16px; }
+        .footer { margin-top: 32px; font-size: 12px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Healthcare Analytics System</h2>
+            <p style="margin: 8px 0 0 0; color: #64748b; font-size: 14px;">Appointment Request Update</p>
+        </div>
+
+        <p>Dear <strong>{{ patient_name }}</strong>,</p>
+        <p>We are writing to inform you that your appointment request could not be approved by the doctor at this time.</p>
+
+        <div style="margin: 16px 0;">
+            <span class="badge">Status: Request Not Approved</span>
+        </div>
+
+        <table class="details-table">
+            <tr>
+                <td class="label">Appointment ID</td>
+                <td><strong>#{{ appointment_id }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label">Doctor Name</td>
+                <td>Dr. {{ doctor_name }}</td>
+            </tr>
+            <tr>
+                <td class="label">Requested Date</td>
+                <td>{{ appointment_date }} at {{ appointment_time }}</td>
+            </tr>
+        </table>
+
+        {% if rejection_reason %}
+        <div class="reason-box">
+            <strong>Reason for Rejection / Decline:</strong><br>
+            "{{ rejection_reason }}"
+        </div>
+        {% endif %}
+
+        <p>You can choose another date, time slot, or select a different doctor from our medical directory to schedule a new visit.</p>
+
+        <a href="{{ booking_url }}" class="btn">Book Another Appointment</a>
+
+        <div class="footer">
+            <p>Healthcare Analytics System • Caring for your wellness with predictive analytics.</p>
+        </div>
+    </div>
+</body>
+</html>

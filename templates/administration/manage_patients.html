@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Patients | Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0">Patient Registry</h3>
+            <p class="text-muted small m-0">Search, filter, and inspect registered patient profiles</p>
+        </div>
+    </div>
+
+    <div class="card-custom p-3 mb-4">
+        <form method="get" class="row g-2">
+            <div class="col-md-9">
+                <input type="text" name="q" value="{{ query }}" class="form-control rounded-3" placeholder="Search by name, email, phone number...">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-brand-primary w-100 rounded-3">Search Registry</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card-custom p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Patient</th>
+                        <th>Age / Gender</th>
+                        <th>Blood Group</th>
+                        <th>BMI</th>
+                        <th>Contact</th>
+                        <th>Emergency Contact</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in patients %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold">{{ p.user.get_full_name }}</div>
+                                <small class="text-muted">{{ p.user.email }}</small>
+                            </td>
+                            <td>{{ p.age }} yrs / {{ p.gender }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ p.blood_group|default:"N/A" }}</span></td>
+                            <td>{{ p.bmi }}</td>
+                            <td>{{ p.user.phone|default:"N/A" }}</td>
+                            <td>{{ p.emergency_contact_name|default:"N/A" }} ({{ p.emergency_contact_phone|default:"-" }})</td>
+                            <td>
+                                <a href="{% url 'admin_patient_detail' p.id %}" class="btn btn-outline-primary btn-sm rounded-3">View History</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">No patient records found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block title %}Assessment Result - {{ assessment.patient.user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Action Bar -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0">Clinical Risk Prediction Report</h3>
+            <p class="text-muted small m-0">Generated on {{ assessment.created_at|date:"F d, Y \a\t H:i" }} | Assessment ID #{{ assessment.id }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'export_assessment_pdf' assessment.id %}" class="btn btn-brand-primary rounded-3">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Health Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Mandatory Clinical Disclaimer Banner -->
+    <div class="disclaimer-banner mb-4">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Clinical Disclaimer:</strong> This is a clinical decision-support estimate, not a diagnosis. Final decisions rest with the attending physician.
+    </div>
+
+    <!-- Main Score Card -->
+    <div class="card-custom p-4 p-md-5 mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-4 text-center border-end pe-md-4">
+                <div class="text-muted small mb-2 text-uppercase fw-bold">Calculated Risk Tier</div>
+                <div class="my-2">
+                    <span class="risk-badge badge-{% if assessment.final_level == 'LOW' %}low{% elif assessment.final_level == 'MEDIUM' %}medium{% else %}high{% endif %} display-6 fw-bold px-4 py-2">
+                        {{ assessment.final_level }} RISK
+                    </span>
+                </div>
+                {% if assessment.doctor_override_level %}
+                    <div class="badge bg-secondary mt-2">Physician Override Applied (Engine: {{ assessment.computed_level }})</div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-8 ps-md-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="fw-bold m-0">Composite Disease Risk Score</h5>
+                    <span class="fs-4 fw-bold text-brand-primary">{{ assessment.computed_score }} / 100</span>
+                </div>
+                
+                <!-- Score Progress Bar -->
+                <div class="progress mb-3" style="height: 18px; border-radius: 50rem;">
+                    <div class="progress-bar {% if assessment.final_level == 'LOW' %}bg-success{% elif assessment.final_level == 'MEDIUM' %}bg-warning{% else %}bg-danger{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ assessment.computed_score }}%; font-weight: bold;" 
+                         aria-valuenow="{{ assessment.computed_score }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        {{ assessment.computed_score }}%
+                    </div>
+                </div>
+
+                <div class="row text-center g-2 mt-2">
+                    <div class="col-4">
+                        <div class="bg-light p-2 rounded-3">
+                            <small class="text-muted d-block">Heart Risk</small>
+                            <span class="fw-bold fs-6">{{ assessment.heart_score }} / 100</span>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-light p-2 rounded-3">
+                            <small class="text-muted d-block">Diabetes Risk</small>
+                            <span class="fw-bold fs-6">{{ assessment.diabetes_score }} / 100</span>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-light p-2 rounded-3">
+                            <small class="text-muted d-block">Hypertension Risk</small>
+                            <span class="fw-bold fs-6">{{ assessment.hypertension_score }} / 100</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Measured Vitals & Biomarkers Grid -->
+    <div class="card-custom p-4 mb-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-sliders text-brand-primary me-2"></i>Evaluated Patient Biomarkers & Vitals</h5>
+        <div class="row g-3 small">
+            <div class="col-md-3 col-6">
+                <div class="border p-3 rounded-3 bg-light">
+                    <span class="text-muted d-block">Blood Pressure</span>
+                    <strong class="fs-6 text-dark">{{ assessment.systolic_bp }} / {{ assessment.diastolic_bp }} mmHg</strong>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border p-3 rounded-3 bg-light">
+                    <span class="text-muted d-block">Fasting Sugar</span>
+                    <strong class="fs-6 text-dark">{{ assessment.fasting_sugar }} mg/dL</strong>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border p-3 rounded-3 bg-light">
+                    <span class="text-muted d-block">Postprandial Sugar</span>
+                    <strong class="fs-6 text-dark">{{ assessment.postprandial_sugar }} mg/dL</strong>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border p-3 rounded-3 bg-light">
+                    <span class="text-muted d-block">Total Cholesterol</span>
+                    <strong class="fs-6 text-dark">{{ assessment.total_cholesterol }} mg/dL</strong>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border p-3 rounded-3 bg-light">
+                    <span class="text-muted d-block">Calculated BMI</span>
+                    <strong class="fs-6 text-dark">{{ assessment.bmi }}</strong>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border p-3 rounded-3 bg-light">
+                    <span class="text-muted d-block">Smoking / Alcohol</span>
+                    <strong class="fs-6 text-dark">{{ assessment.smoking_status|title }} / {{ assessment.alcohol_consumption|title }}</strong>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border p-3 rounded-3 bg-light">
+                    <span class="text-muted d-block">Physical Activity</span>
+                    <strong class="fs-6 text-dark">{{ assessment.physical_activity|title }}</strong>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border p-3 rounded-3 bg-light">
+                    <span class="text-muted d-block">Family History</span>
+                    <strong class="fs-6 text-dark">{{ assessment.family_history_text|default:"None" }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Automated Action Plan & Doctor Notes -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card-custom p-4 h-100">
+                <h5 class="fw-bold mb-3"><i class="bi bi-shield-check text-success me-2"></i>Clinical Precautions & Next Steps</h5>
+                <ul class="list-unstyled mb-0">
+                    {% for p in precautions %}
+                        <li class="mb-3 d-flex align-items-start gap-2">
+                            <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                            <span>{{ p }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="text-muted">No specific precautions generated.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card-custom p-4 h-100">
+                <h5 class="fw-bold mb-3"><i class="bi bi-journal-text text-brand-primary me-2"></i>Attending Physician Clinical Notes</h5>
+                {% if assessment.doctor_notes %}
+                    <p class="p-3 bg-light rounded-3 text-dark mb-0" style="white-space: pre-line;">{{ assessment.doctor_notes }}</p>
+                {% else %}
+                    <p class="text-muted mb-0">No custom physician notes attached to this evaluation.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

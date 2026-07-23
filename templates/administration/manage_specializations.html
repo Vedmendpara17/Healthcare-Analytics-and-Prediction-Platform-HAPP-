@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Medical Specializations | Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0">Medical Specializations & Departments</h3>
+            <p class="text-muted small m-0">Manage clinical departments available for doctor profiles</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-5">
+            <div class="card-custom p-4">
+                <h5 class="fw-bold mb-3">Add New Specialization</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Specialization Name *</label>
+                        <input type="text" name="name" class="form-control rounded-3" placeholder="e.g. Cardiology, Neurology" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Bootstrap Icon Class</label>
+                        <input type="text" name="icon" class="form-control rounded-3" value="bi-heart-pulse" placeholder="bi-heart-pulse">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" class="form-control rounded-3" rows="3" placeholder="Brief summary of department scope..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-brand-primary w-100 rounded-3">Save Specialization</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card-custom p-4">
+                <h5 class="fw-bold mb-3">Existing Departments</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Icon</th>
+                                <th>Department Name</th>
+                                <th>Description</th>
+                                <th>Active Doctors</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for spec in specializations %}
+                                <tr>
+                                    <td><i class="bi {{ spec.icon }} fs-4 text-brand-primary"></i></td>
+                                    <td class="fw-bold">{{ spec.name }}</td>
+                                    <td class="small text-muted">{{ spec.description|default:"-" }}</td>
+                                    <td><span class="badge bg-primary-subtle text-primary">{{ spec.doctor_count }} doctors</span></td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No specializations defined yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

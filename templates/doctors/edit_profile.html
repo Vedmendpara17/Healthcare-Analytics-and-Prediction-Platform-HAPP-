@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Doctor Profile | Doctor Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-custom p-4 p-md-5">
+                <h3 class="fw-bold mb-4"><i class="bi bi-person-gear text-brand-primary me-2"></i>Update Doctor Profile</h3>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Qualification *</label>
+                            <input type="text" name="qualification" value="{{ doctor.qualification }}" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Years of Experience *</label>
+                            <input type="number" name="experience_years" value="{{ doctor.experience_years }}" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Hospital / Clinic Name *</label>
+                            <input type="text" name="hospital_name" value="{{ doctor.hospital_name }}" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Consultation Fee ($) *</label>
+                            <input type="number" step="0.01" name="consultation_fee" value="{{ doctor.consultation_fee }}" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Professional Biography / Summary</label>
+                            <textarea name="bio" class="form-control rounded-3" rows="3">{{ doctor.bio|default:"" }}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Profile Photograph</label>
+                            <input type="file" name="profile_photo" class="form-control rounded-3">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'doctor_dashboard' %}" class="btn btn-outline-secondary rounded-3">Cancel</a>
+                        <button type="submit" class="btn btn-brand-primary rounded-3 px-4">Update Profile</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

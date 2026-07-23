@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Portal | Overview{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0">Hello, {{ patient.user.get_full_name }}</h3>
+            <p class="text-muted small m-0">Personal Health Portal & Clinical Decision Tracking</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'book_appointment' %}" class="btn btn-brand-primary rounded-3">
+                <i class="bi bi-calendar-plus me-1"></i> Book Appointment
+            </a>
+        </div>
+    </div>
+
+    <!-- Health Summary Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card-custom p-4 text-center h-100">
+                <div class="text-muted small mb-2">Latest Clinical Risk Evaluation</div>
+                {% if latest_assessment %}
+                    <div class="my-2">
+                        <span class="risk-badge badge-{% if latest_assessment.final_level == 'LOW' %}low{% elif latest_assessment.final_level == 'MEDIUM' %}medium{% else %}high{% endif %} fs-5 px-4 py-2">
+                            {{ latest_assessment.final_level }} RISK
+                        </span>
+                    </div>
+                    <div class="text-muted small mt-2">Overall Score: <strong>{{ latest_assessment.computed_score }} / 100</strong></div>
+                    <small class="text-muted d-block mt-1">Evaluated on {{ latest_assessment.created_at|date:"M d, Y" }}</small>
+                {% else %}
+                    <div class="text-muted py-3">No risk evaluation conducted yet</div>
+                {% endif %}
+                <a href="{% url 'patient_risk_history' %}" class="btn btn-link text-brand-primary btn-sm mt-2 text-decoration-none">View Complete History &rarr;</a>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card-custom p-4 h-100">
+                <h6 class="fw-bold mb-3"><i class="bi bi-person-badge text-brand-primary me-2"></i>Personal Vitals</h6>
+                <div class="d-flex justify-content-between py-2 border-bottom small">
+                    <span class="text-muted">Calculated BMI</span>
+                    <span class="fw-bold">{{ patient.bmi }}</span>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom small">
+                    <span class="text-muted">Height / Weight</span>
+                    <span class="fw-bold">{{ patient.height_cm }} cm / {{ patient.weight_kg }} kg</span>
+                </div>
+                <div class="d-flex justify-content-between py-2 small">
+                    <span class="text-muted">Blood Group</span>
+                    <span class="fw-bold">{{ patient.blood_group|default:"Not specified" }}</span>
+                </div>
+                <a href="{% url 'edit_patient_profile' %}" class="btn btn-link text-brand-primary btn-sm p-0 mt-2 text-decoration-none">Update Profile Vitals &rarr;</a>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card-custom p-4 h-100 bg-light">
+                <h6 class="fw-bold mb-3 text-brand-primary"><i class="bi bi-lightbulb-fill me-2"></i>Personalized Health Advice</h6>
+                <ul class="list-unstyled mb-0 small text-muted">
+                    {% for tip in health_tips %}
+                        <li class="mb-2 d-flex align-items-start gap-2">
+                            <i class="bi bi-check2-circle text-success mt-1"></i>
+                            <span>{{ tip }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Upcoming Appointments -->
+        <div class="col-lg-7">
+            <div class="card-custom p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold m-0"><i class="bi bi-calendar-event text-brand-primary me-2"></i>Upcoming Appointments</h5>
+                    <a href="{% url 'patient_appointments_list' %}" class="small text-brand-primary text-decoration-none">View All</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for app in upcoming_appointments %}
+                        <div class="list-group-item px-0 py-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold">Dr. {{ app.doctor.user.get_full_name }}</div>
+                                <small class="text-muted">{{ app.doctor.specialization.name|default:"General" }} • {{ app.date }} ({{ app.get_time_slot_display_text }})</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-{% if app.status == 'APPROVED' %}success{% else %}warning text-dark{% endif %}">
+                                    {{ app.get_status_display }}
+                                </span>
+                                <a href="{% url 'cancel_appointment' app.id %}" class="btn btn-sm btn-outline-danger rounded-3">Cancel</a>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-center text-muted py-4">No upcoming appointments scheduled.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Prescriptions & Vault Quick Links -->
+        <div class="col-lg-5">
+            <div class="card-custom p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold m-0"><i class="bi bi-file-earmark-medical text-brand-primary me-2"></i>Recent Prescriptions</h5>
+                    <a href="{% url 'patient_prescriptions' %}" class="small text-brand-primary text-decoration-none">View All</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for p in recent_prescriptions %}
+                        <div class="list-group-item px-0 py-2">
+                            <div class="fw-bold small">Dr. {{ p.appointment.doctor.user.get_full_name }}</div>
+                            <div class="text-muted small text-truncate">{{ p.medicines_text }}</div>
+                        </div>
+                    {% empty %}
+                        <div class="text-center text-muted py-3 small">No prescriptions issued yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card-custom p-4">
+                <h5 class="fw-bold mb-2"><i class="bi bi-folder-symlink text-brand-primary me-2"></i>Medical Records Vault</h5>
+                <p class="text-muted small mb-3">Upload your lab reports, X-rays, and medical documents for doctor review.</p>
+                <a href="{% url 'medical_records_vault' %}" class="btn btn-outline-primary btn-sm rounded-3 w-100">Access Medical Vault</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

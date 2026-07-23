@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Healthcare Analytics & Prediction System | Home{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Hero Banner -->
+    <div class="card-custom bg-brand-primary text-white p-5 mb-5 position-relative overflow-hidden">
+        <div class="row align-items-center position-relative" style="z-index: 2;">
+            <div class="col-lg-7">
+                <span class="badge bg-white text-dark mb-3 px-3 py-2 fw-semibold rounded-pill">Clinical Decision Support System</span>
+                <h1 class="display-4 fw-bold text-white mb-3">AI-Assisted Healthcare Analytics & Predictive Risk Assessment</h1>
+                <p class="lead opacity-90 mb-4">Empowering physicians and patients with structured health data evaluation, early disease risk categorization, and seamless appointment management.</p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{% url 'register_patient' %}" class="btn btn-light btn-lg fw-semibold text-brand-primary rounded-3 px-4 shadow">Patient Portal Signup</a>
+                    <a href="{% url 'register_doctor' %}" class="btn btn-outline-light btn-lg fw-semibold rounded-3 px-4">Doctor Registration</a>
+                </div>
+            </div>
+            <div class="col-lg-5 text-center d-none d-lg-block">
+                <i class="bi bi-heart-pulse text-white opacity-25" style="font-size: 15rem;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Highlights -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="stat-card h-100">
+                <div class="stat-icon bg-primary-subtle text-primary mb-3">
+                    <i class="bi bi-cpu-fill"></i>
+                </div>
+                <h5 class="fw-bold">Predictive Risk Engine</h5>
+                <p class="text-muted small">Multi-condition scoring model evaluating cardiovascular, diabetes, and hypertension indicators into Low, Medium, and High risk tiers.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card h-100">
+                <div class="stat-icon bg-success-subtle text-success mb-3">
+                    <i class="bi bi-calendar2-check-fill"></i>
+                </div>
+                <h5 class="fw-bold">Smart Appointments</h5>
+                <p class="text-muted small">Conflict-free booking calendar for doctors and patients with slot management and instant status notifications.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card h-100">
+                <div class="stat-icon bg-warning-subtle text-warning mb-3">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                </div>
+                <h5 class="fw-bold">Health Vault & PDF Reports</h5>
+                <p class="text-muted small">Store lab reports securely and download complete clinical health summaries with prescriptions in PDF format.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Featured Specializations -->
+    <div class="mb-5">
+        <h3 class="fw-bold mb-4">Medical Departments & Specializations</h3>
+        <div class="row g-3">
+            {% for spec in specializations %}
+                <div class="col-md-4 col-6">
+                    <div class="card-custom p-3 d-flex align-items-center gap-3">
+                        <div class="stat-icon bg-light text-brand-primary">
+                            <i class="bi {{ spec.icon|default:'bi-hospital' }}"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1">{{ spec.name }}</h6>
+                            <small class="text-muted">{{ spec.description|truncatewords:6 }}</small>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12 text-muted">Specializations will appear here once seeded.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Appointment Rescheduled</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .header { border-bottom: 2px solid #f59e0b; padding-bottom: 16px; margin-bottom: 24px; }
+        .header h2 { color: #d97706; margin: 0; font-size: 22px; }
+        .badge { display: inline-block; background-color: #fef3c7; color: #b45309; font-weight: 600; padding: 4px 12px; border-radius: 9999px; font-size: 13px; }
+        .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .details-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        .details-table td.label { font-weight: 600; color: #64748b; width: 35%; }
+        .reschedule-box { background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin: 20px 0; font-size: 14px; }
+        .footer { margin-top: 32px; font-size: 12px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Healthcare Analytics System</h2>
+            <p style="margin: 8px 0 0 0; color: #64748b; font-size: 14px;">Appointment Reschedule Notice</p>
+        </div>
+
+        <p>Dear <strong>{{ patient_name }}</strong>,</p>
+        <p>Your upcoming medical appointment with <strong>Dr. {{ doctor_name }}</strong> has been <strong>rescheduled</strong>.</p>
+
+        <div style="margin: 16px 0;">
+            <span class="badge">Appointment Rescheduled</span>
+        </div>
+
+        <div class="reschedule-box">
+            <strong style="color: #b45309;">New Schedule Details:</strong><br>
+            <div style="font-size: 16px; font-weight: 700; color: #78350f; margin-top: 4px;">
+                {{ new_date }} at {{ new_time }}
+            </div>
+        </div>
+
+        <table class="details-table">
+            <tr>
+                <td class="label">Appointment ID</td>
+                <td><strong>#{{ appointment_id }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label">Attending Doctor</td>
+                <td>Dr. {{ doctor_name }}</td>
+            </tr>
+            <tr>
+                <td class="label">Department / Spec</td>
+                <td>{{ department }}</td>
+            </tr>
+            <tr>
+                <td class="label">Hospital Name</td>
+                <td>{{ hospital_name }}</td>
+            </tr>
+            <tr>
+                <td class="label">Hospital Address</td>
+                <td>{{ hospital_address }}</td>
+            </tr>
+            {% if reschedule_note %}
+            <tr>
+                <td class="label">Doctor's Note</td>
+                <td><em>"{{ reschedule_note }}"</em></td>
+            </tr>
+            {% endif %}
+        </table>
+
+        <p class="small text-muted">If this new timing does not work for you, please visit your patient dashboard to manage your appointments.</p>
+
+        <div class="footer">
+            <p>Healthcare Analytics System • Caring for your wellness with predictive analytics.</p>
+        </div>
+    </div>
+</body>
+</html>

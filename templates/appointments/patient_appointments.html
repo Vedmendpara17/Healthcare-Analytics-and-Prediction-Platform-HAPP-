@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}My Appointments Calendar | Patient Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0">My Appointments & Calendar Schedule</h3>
+            <p class="text-muted small m-0">Interactive schedule view of all your consultations</p>
+        </div>
+        <a href="{% url 'book_appointment' %}" class="btn btn-brand-primary rounded-3">
+            <i class="bi bi-calendar-plus me-1"></i> Book New Appointment
+        </a>
+    </div>
+
+    <!-- FullCalendar Widget -->
+    <div class="card-custom p-4 mb-4">
+        <div id="calendar"></div>
+    </div>
+
+    <!-- Table View -->
+    <div class="card-custom p-4">
+        <h5 class="fw-bold mb-3 font-heading"><i class="bi bi-list-stars me-2 text-teal" style="color: #0f766e;"></i>Appointments History List</h5>
+        <div class="table-responsive">
+            <table class="table table-custom align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Doctor / Facility</th>
+                        <th>Specialization</th>
+                        <th>Scheduled Date & Slot</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in appointments %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <div class="patient-avatar" style="background: linear-gradient(135deg, #0d9488 0%, #0284c7 100%);">
+                                        Dr
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark mb-0">Dr. {{ app.doctor.user.get_full_name }}</div>
+                                        <span class="text-muted small"><i class="bi bi-hospital me-1"></i>{{ app.doctor.hospital_name }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border px-2.5 py-1.5 rounded-pill font-heading">
+                                    {{ app.doctor.specialization.name|default:"General Medicine" }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ app.date|date:"B d, Y" }}</div>
+                                <span class="text-muted small"><i class="bi bi-clock me-1"></i>{{ app.get_time_slot_display_text }}</span>
+                            </td>
+                            <td>
+                                <span class="text-secondary small" title="{{ app.reason }}">{{ app.reason|truncatechars:40 }}</span>
+                            </td>
+                            <td>
+                                {% if app.status == 'APPROVED' %}
+                                    <span class="app-status-pill status-approved"><i class="bi bi-check-circle-fill me-1"></i>Approved</span>
+                                {% elif app.status == 'PENDING' %}
+                                    <span class="app-status-pill status-pending"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                                {% elif app.status == 'RESCHEDULED' %}
+                                    <span class="app-status-pill status-rescheduled"><i class="bi bi-arrow-repeat me-1"></i>Rescheduled</span>
+                                {% elif app.status == 'COMPLETED' %}
+                                    <span class="app-status-pill status-completed"><i class="bi bi-check-all me-1"></i>Completed</span>
+                                {% else %}
+                                    <span class="app-status-pill status-cancelled"><i class="bi bi-x-circle-fill me-1"></i>{{ app.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if app.status != 'CANCELLED' and app.status != 'COMPLETED' and app.status != 'REJECTED' %}
+                                    <a href="{% url 'cancel_appointment' app.id %}" class="btn btn-outline-danger btn-sm rounded-3 px-3 fw-medium">
+                                        <i class="bi bi-x-lg me-1"></i>Cancel
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-5">
+                                <div class="d-inline-flex bg-light text-secondary rounded-circle p-3 mb-3">
+                                    <i class="bi bi-calendar-x fs-2"></i>
+                                </div>
+                                <div class="fw-bold text-dark mb-1">No Appointment Records Found</div>
+                                <p class="small text-muted mb-0">Book your first medical appointment to see it listed here.</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const calendarEl = document.getElementById('calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek'
+            },
+            events: '/appointments/api/calendar-events/',
+            eventClick: function(info) {
+                alert('Appointment: ' + info.event.title + '\nStart: ' + info.event.start.toLocaleString());
+            }
+        });
+        calendar.render();
+    });
+</script>
+{% endblock %}

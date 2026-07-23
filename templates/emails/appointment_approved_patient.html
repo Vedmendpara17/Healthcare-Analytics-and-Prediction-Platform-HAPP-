@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Appointment Confirmed</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .header { border-bottom: 2px solid #22c55e; padding-bottom: 16px; margin-bottom: 24px; }
+        .header h2 { color: #15803d; margin: 0; font-size: 22px; }
+        .badge { display: inline-block; background-color: #dcfce7; color: #15803d; font-weight: 600; padding: 4px 12px; border-radius: 9999px; font-size: 13px; }
+        .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .details-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        .details-table td.label { font-weight: 600; color: #64748b; width: 35%; }
+        .notice-box { background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; border-radius: 4px; margin: 20px 0; font-size: 14px; }
+        .footer { margin-top: 32px; font-size: 12px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Healthcare Analytics System</h2>
+            <p style="margin: 8px 0 0 0; color: #64748b; font-size: 14px;">Appointment Confirmation Notice</p>
+        </div>
+
+        <p>Dear <strong>{{ patient_name }}</strong>,</p>
+        <p>Great news! Your medical appointment has been <strong>approved and confirmed</strong> by your attending physician.</p>
+
+        <div style="margin: 16px 0;">
+            <span class="badge">Appointment Confirmed</span>
+        </div>
+
+        <table class="details-table">
+            <tr>
+                <td class="label">Appointment ID</td>
+                <td><strong>#{{ appointment_id }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label">Attending Doctor</td>
+                <td><strong>Dr. {{ doctor_name }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label">Department / Spec</td>
+                <td>{{ department }}</td>
+            </tr>
+            <tr>
+                <td class="label">Hospital / Clinic</td>
+                <td>{{ hospital_name }}</td>
+            </tr>
+            <tr>
+                <td class="label">Scheduled Date</td>
+                <td><strong>{{ appointment_date }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label">Scheduled Time</td>
+                <td><strong>{{ appointment_time }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label">Hospital Address</td>
+                <td>{{ hospital_address }}</td>
+            </tr>
+        </table>
+
+        <div class="notice-box">
+            <strong><i class="bi bi-info-circle me-1"></i> Pre-Visit Instructions:</strong>
+            <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                <li>Please arrive at least 15 minutes before your scheduled appointment time.</li>
+                <li>Bring a valid photo ID and your medical registration card.</li>
+                <li>Bring any prior test reports, blood work, or current medication lists.</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>Healthcare Analytics System • Caring for your wellness with predictive analytics.</p>
+        </div>
+    </div>
+</body>
+</html>

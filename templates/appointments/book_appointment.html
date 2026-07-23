@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}Book Doctor Appointment | Healthcare System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-custom p-4 p-md-5">
+                <h3 class="fw-bold mb-1"><i class="bi bi-calendar-plus text-brand-primary me-2"></i>Book Consultation Appointment</h3>
+                <p class="text-muted small mb-4">Select a doctor, pick a convenient date, and reserve your open time slot.</p>
+
+                <form method="post" id="bookingForm">
+                    {% csrf_token %}
+                    
+                    <!-- Doctor Selection -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Physician *</label>
+                        <select name="doctor_id" id="doctorSelect" class="form-select rounded-3" required>
+                            <option value="">-- Select Doctor --</option>
+                            {% for doc in doctors %}
+                                <option value="{{ doc.id }}" {% if selected_doctor and selected_doctor.id == doc.id %}selected{% endif %}>
+                                    Dr. {{ doc.user.get_full_name }} ({{ doc.specialization.name|default:"General" }} - {{ doc.hospital_name }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Date Selection -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Appointment Date *</label>
+                        <input type="date" name="date" id="dateInput" min="{{ min_date }}" class="form-control rounded-3" required>
+                    </div>
+
+                    <!-- Time Slot Grid -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Available Time Slots *</label>
+                        <div id="slotsContainer" class="d-flex flex-wrap gap-2 py-2">
+                            <span class="text-muted small">Please select a doctor and date first to load available time slots.</span>
+                        </div>
+                        <input type="hidden" name="time_slot" id="selectedTimeSlot" required>
+                    </div>
+
+                    <!-- Reason -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Primary Reason / Symptoms *</label>
+                        <textarea name="reason" class="form-control rounded-3" rows="3" placeholder="Briefly describe your symptoms or reason for visit..." required></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'patient_dashboard' %}" class="btn btn-outline-secondary rounded-3">Cancel</a>
+                        <button type="submit" id="submitBtn" class="btn btn-brand-primary rounded-3 px-4" disabled>Confirm & Request Booking</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const doctorSelect = document.getElementById('doctorSelect');
+        const dateInput = document.getElementById('dateInput');
+        const slotsContainer = document.getElementById('slotsContainer');
+        const selectedTimeSlot = document.getElementById('selectedTimeSlot');
+        const submitBtn = document.getElementById('submitBtn');
+
+        function fetchAvailableSlots() {
+            const docId = doctorSelect.value;
+            const dateVal = dateInput.value;
+
+            if (!docId || !dateVal) {
+                slotsContainer.innerHTML = '<span class="text-muted small">Please select a doctor and date first.</span>';
+                selectedTimeSlot.value = '';
+                submitBtn.disabled = true;
+                return;
+            }
+
+            slotsContainer.innerHTML = '<div class="spinner-border spinner-border-sm text-brand-primary" role="status"></div> Loading slots...';
+
+            fetch(`/appointments/api/available-slots/?doctor_id=${docId}&date=${dateVal}`)
+                .then(res => res.json())
+                .then(data => {
+                    slotsContainer.innerHTML = '';
+                    if (!data.slots || data.slots.length === 0) {
+                        slotsContainer.innerHTML = '<span class="text-danger small">No available slots on this date.</span>';
+                        return;
+                    }
+
+                    data.slots.forEach(slot => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = slot.available ? 'btn btn-outline-primary btn-sm rounded-3' : 'btn btn-light btn-sm text-muted rounded-3 disabled';
+                        btn.innerText = slot.label;
+                        
+                        if (!slot.available) {
+                            btn.disabled = true;
+                        } else {
+                            btn.onclick = function() {
+                                document.querySelectorAll('#slotsContainer button').forEach(b => b.classList.remove('btn-brand-primary', 'text-white'));
+                                btn.classList.add('btn-brand-primary', 'text-white');
+                                selectedTimeSlot.value = slot.code;
+                                submitBtn.disabled = false;
+                            };
+                        }
+                        slotsContainer.appendChild(btn);
+                    });
+                })
+                .catch(err => {
+                    slotsContainer.innerHTML = '<span class="text-danger small">Failed to load schedule.</span>';
+                });
+        }
+
+        doctorSelect.addEventListener('change', fetchAvailableSlots);
+        dateInput.addEventListener('change', fetchAvailableSlots);
+
+        // Auto trigger if pre-selected
+        if (doctorSelect.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+            fetchAvailableSlots();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}System Analytics & Risk Trends | Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0">Healthcare Risk Analytics & Demographics</h3>
+            <p class="text-muted small m-0">Aggregated disease risk statistics and age breakdown</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Risk Tier Breakdown -->
+        <div class="col-md-6">
+            <div class="card-custom p-4 h-100">
+                <h5 class="fw-bold mb-3"><i class="bi bi-activity text-brand-primary me-2"></i>Risk Tier Proportion</h5>
+                <div style="height: 260px; position: relative;">
+                    <canvas id="riskBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Age Distribution -->
+        <div class="col-md-6">
+            <div class="card-custom p-4 h-100">
+                <h5 class="fw-bold mb-3"><i class="bi bi-people text-brand-primary me-2"></i>Patient Age Grouping</h5>
+                <div style="height: 260px; position: relative;">
+                    <canvas id="agePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Risk Bar Chart
+        new Chart(document.getElementById('riskBarChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+                datasets: [{
+                    label: 'Total Patients Assessed',
+                    data: [{{ risk_by_level.LOW }}, {{ risk_by_level.MEDIUM }}, {{ risk_by_level.HIGH }}],
+                    backgroundColor: ['#22C55E', '#F59E0B', '#EF4444'],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+
+        // Age Group Pie Chart
+        new Chart(document.getElementById('agePieChart').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: ['Under 30 yrs', '30 - 50 yrs', 'Over 50 yrs'],
+                datasets: [{
+                    data: [{{ under_30 }}, {{ age_30_50 }}, {{ over_50 }}],
+                    backgroundColor: ['#38BDF8', '#0F766E', '#64748B']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    });
+</script>
+{% endblock %}

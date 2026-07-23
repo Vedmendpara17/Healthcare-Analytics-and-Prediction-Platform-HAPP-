@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Doctors | Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0">Doctor Accounts Management</h3>
+            <p class="text-muted small m-0">Approve, deactivate, and review medical license credentials</p>
+        </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="card-custom p-3 mb-4">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <input type="text" name="q" value="{{ query }}" class="form-control rounded-3" placeholder="Search by name, license #, hospital...">
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select rounded-3">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Verification Status</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending Approval</option>
+                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved Only</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-brand-primary w-100 rounded-3">Filter</button>
+            </div>
+            <div class="col-md-2">
+                <a href="{% url 'manage_doctors' %}" class="btn btn-outline-secondary w-100 rounded-3">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Doctors Table -->
+    <div class="card-custom p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Doctor</th>
+                        <th>Specialization</th>
+                        <th>License Number</th>
+                        <th>Qualification</th>
+                        <th>Hospital</th>
+                        <th>Fee</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in doctors %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if doc.profile_photo %}
+                                        <img src="{{ doc.profile_photo.url }}" class="rounded-circle" style="width: 38px; height: 38px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-brand-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px;">
+                                            {{ doc.user.first_name|first|upper }}
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-bold">Dr. {{ doc.user.get_full_name }}</div>
+                                        <small class="text-muted">{{ doc.user.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ doc.specialization.name|default:"General" }}</td>
+                            <td><code>{{ doc.license_number }}</code></td>
+                            <td>{{ doc.qualification }} ({{ doc.experience_years }} yrs)</td>
+                            <td>{{ doc.hospital_name }}</td>
+                            <td class="fw-semibold">${{ doc.consultation_fee }}</td>
+                            <td>
+                                {% if doc.is_approved %}
+                                    <span class="badge bg-success-subtle text-success border border-success">Approved</span>
+                                {% else %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    {% if not doc.is_approved %}
+                                        <a href="{% url 'approve_doctor' doc.id %}" class="btn btn-success btn-sm rounded-3">Approve</a>
+                                    {% else %}
+                                        <a href="{% url 'toggle_doctor_status' doc.id %}" class="btn btn-outline-danger btn-sm rounded-3">Deactivate</a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">No doctor records found matching criteria.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

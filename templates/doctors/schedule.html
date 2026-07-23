@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Schedule | Doctor Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0">Weekly Availability & Schedule</h3>
+            <p class="text-muted small m-0">Set your recurring consultation hours for patient booking</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-5">
+            <div class="card-custom p-4">
+                <h5 class="fw-bold mb-3">Add Available Time Slot</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Day of Week *</label>
+                        <select name="weekday" class="form-select rounded-3" required>
+                            <option value="0">Monday</option>
+                            <option value="1">Tuesday</option>
+                            <option value="2">Wednesday</option>
+                            <option value="3">Thursday</option>
+                            <option value="4">Friday</option>
+                            <option value="5">Saturday</option>
+                            <option value="6">Sunday</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Start Time *</label>
+                        <input type="time" name="start_time" class="form-control rounded-3" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">End Time *</label>
+                        <input type="time" name="end_time" class="form-control rounded-3" required>
+                    </div>
+                    <button type="submit" class="btn btn-brand-primary w-100 rounded-3">Add Schedule Slot</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card-custom p-4">
+                <h5 class="fw-bold mb-3">Current Active Availability</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Weekday</th>
+                                <th>Working Hours</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for slot in availabilities %}
+                                <tr>
+                                    <td class="fw-bold">{{ slot.get_weekday_display }}</td>
+                                    <td>{{ slot.start_time|time:"h:i A" }} - {{ slot.end_time|time:"h:i A" }}</td>
+                                    <td>
+                                        <a href="{% url 'delete_availability' slot.id %}" class="btn btn-outline-danger btn-sm rounded-3">Remove</a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">No custom schedule slots set yet. (Default slot grid will be available for booking).</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
