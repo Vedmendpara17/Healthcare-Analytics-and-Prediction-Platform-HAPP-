@@ -215,7 +215,7 @@
             data: {
                 labels: ['Low Risk', 'Medium Risk', 'High Risk'],
                 datasets: [{
-                    data: [{{ low_risk }}, {{ med_risk }}, {{ high_risk }}],
+                    data: [Number('{{ low_risk|default:0 }}'), Number('{{ med_risk|default:0 }}'), Number('{{ high_risk|default:0 }}')],
                     backgroundColor: ['#22C55E', '#F59E0B', '#EF4444'],
                     borderWidth: 2,
                     borderColor: '#ffffff'

@@ -45,7 +45,7 @@
                 labels: ['Low Risk', 'Medium Risk', 'High Risk'],
                 datasets: [{
                     label: 'Total Patients Assessed',
-                    data: [{{ risk_by_level.LOW }}, {{ risk_by_level.MEDIUM }}, {{ risk_by_level.HIGH }}],
+                    data: [Number('{{ risk_by_level.LOW|default:0 }}'), Number('{{ risk_by_level.MEDIUM|default:0 }}'), Number('{{ risk_by_level.HIGH|default:0 }}')],
                     backgroundColor: ['#22C55E', '#F59E0B', '#EF4444'],
                     borderRadius: 8
                 }]
@@ -64,7 +64,7 @@
             data: {
                 labels: ['Under 30 yrs', '30 - 50 yrs', 'Over 50 yrs'],
                 datasets: [{
-                    data: [{{ under_30 }}, {{ age_30_50 }}, {{ over_50 }}],
+                    data: [Number('{{ under_30|default:0 }}'), Number('{{ age_30_50|default:0 }}'), Number('{{ over_50|default:0 }}')],
                     backgroundColor: ['#38BDF8', '#0F766E', '#64748B']
                 }]
             },

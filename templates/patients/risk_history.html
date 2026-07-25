@@ -70,10 +70,12 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ trend_labels|json_script:"trend-labels-data" }}
+{{ trend_scores|json_script:"trend-scores-data" }}
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const labels = {{ trend_labels|safe }};
-        const scores = {{ trend_scores|safe }};
+        const labels = JSON.parse(document.getElementById('trend-labels-data').textContent || '[]');
+        const scores = JSON.parse(document.getElementById('trend-scores-data').textContent || '[]');
 
         new Chart(document.getElementById('riskHistoryChart').getContext('2d'), {
             type: 'line',
