@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm System Restore | Backup & Recovery{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5 bg-white">
+                <div class="text-center mb-4">
+                    <div class="bg-danger-subtle text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+                        <i class="bi bi-exclamation-triangle-fill fs-2"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark font-heading">Confirm System Restoration</h3>
+                    <p class="text-muted small m-0">Restoring a backup snapshot will overwrite current application databases, uploaded medical reports, and media files.</p>
+                </div>
+
+                <!-- Backup Details Summary -->
+                <div class="card border rounded-3 p-3 bg-light mb-4">
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-archive-fill text-primary me-2"></i>Target Backup Archive</h6>
+                    <div class="row g-2 small">
+                        <div class="col-6"><strong>Archive Name:</strong> {{ backup.backup_name }}</div>
+                        <div class="col-6"><strong>Size:</strong> {{ backup.get_formatted_file_size }}</div>
+                        <div class="col-6"><strong>Created At:</strong> {{ backup.created_at|date:"Y-m-d H:i:s" }}</div>
+                        <div class="col-6"><strong>Type:</strong> {{ backup.get_backup_type_display }}</div>
+                        <div class="col-12"><strong>Checksum SHA-256:</strong> <code>{{ backup.checksum|default:"N/A" }}</code></div>
+                    </div>
+                </div>
+
+                <form method="post" action="{% url 'restore_backup' backup.id %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-dark">{{ form.admin_password.label }}</label>
+                        {{ form.admin_password }}
+                        {% if form.admin_password.errors %}
+                            <div class="text-danger small mt-1">{{ form.admin_password.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-check mb-4">
+                        {{ form.confirm_checkbox }}
+                        <label class="form-check-label small text-muted" for="{{ form.confirm_checkbox.id_for_label }}">
+                            {{ form.confirm_checkbox.label }}
+                        </label>
+                        {% if form.confirm_checkbox.errors %}
+                            <div class="text-danger small mt-1">{{ form.confirm_checkbox.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-danger btn-lg w-100 rounded-3 fw-bold py-2.5 shadow-sm mb-3">
+                        <i class="bi bi-arrow-counterclockwise me-1.5"></i>Execute System Restoration
+                    </button>
+
+                    <div class="text-center">
+                        <a href="{% url 'admin_backup_dashboard' %}" class="btn btn-link text-decoration-none text-secondary small">
+                            <i class="bi bi-x-circle me-1"></i>Cancel & Return to Dashboard
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

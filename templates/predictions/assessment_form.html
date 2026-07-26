@@ -3,94 +3,130 @@
 {% block title %}New Clinical Risk Evaluation | Doctor Panel{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-lg-10">
-            <div class="card-custom p-4 p-md-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
                 <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
                     <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
                         <i class="bi bi-clipboard2-pulse-fill fs-3"></i>
                     </div>
                     <div>
-                        <h3 class="fw-bold mb-0">Structured Health Data & Risk Assessment Form</h3>
+                        <h3 class="fw-bold mb-0 text-dark">Structured Health Data & Risk Assessment Form</h3>
                         <small class="text-muted">Clinical decision-support tool for evaluating cardiovascular, diabetic, and hypertensive risk factors.</small>
                     </div>
                 </div>
 
-                <div class="disclaimer-banner mb-4">
+                <div class="alert alert-info border-0 rounded-3 mb-4">
                     <i class="bi bi-info-circle-fill me-2"></i>
                     <strong>Clinical Disclaimer:</strong> This system provides an estimated decision-support risk categorization, not a diagnostic determination. Final clinical decisions rest solely with the attending physician.
                 </div>
 
-                <form method="post">
+                <form method="post" id="riskForm" class="needs-validation" novalidate>
                     {% csrf_token %}
 
                     <!-- Patient Selection -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">Select Patient for Assessment *</label>
-                        <select name="patient_id" class="form-select form-select-lg rounded-3" required>
+                        <label class="form-label fw-bold">Select Patient for Assessment <span class="text-danger">*</span></label>
+                        <select name="patient_id" id="patientSelect" class="form-select form-select-lg rounded-3" required>
                             <option value="">-- Choose Patient Record --</option>
                             {% for p in patients %}
                                 <option value="{{ p.id }}" {% if selected_patient and selected_patient.id == p.id %}selected{% endif %}>
-                                    {{ p.user.get_full_name }} (Age: {{ p.age }}, {{ p.gender }})
+                                    {{ p.user.get_full_name|default:p.user.username }} (Age: {{ p.age }}, {{ p.gender }})
                                 </option>
                             {% endfor %}
                         </select>
+                        <div class="invalid-feedback">Please select a patient to perform assessment.</div>
+                    </div>
+
+                    <!-- Height / Weight Missing Banners -->
+                    <div id="heightWarning" class="alert alert-warning border-0 rounded-3 d-none mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Height not available. Please ask the patient to update their profile.</strong>
+                    </div>
+                    <div id="weightWarning" class="alert alert-warning border-0 rounded-3 d-none mb-4">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Weight not available. Please ask the patient to update their profile.</strong>
                     </div>
 
                     <!-- 1. Vitals & Physical Biomarkers -->
-                    <h5 class="fw-bold text-brand-primary border-bottom pb-2 mb-3">1. Physical Vitals & Body Metrics</h5>
+                    <h5 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-heart-pulse-fill me-2"></i>1. Physical Vitals & Body Metrics</h5>
                     <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Systolic Blood Pressure (mmHg) *</label>
-                            <input type="number" name="systolic_bp" value="120" min="50" max="250" class="form-control rounded-3" required>
-                            <small class="text-muted">Normal: &lt; 120 mmHg</small>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Systolic BP (mmHg) <span class="text-danger">*</span></label>
+                            <input type="number" name="systolic_bp" id="systolicBp" value="120" min="50" max="250" class="form-control rounded-3" required>
+                            <small class="text-muted d-block mt-1">Format: <strong>120/80 mmHg</strong> (50–250)</small>
+                            <div class="invalid-feedback">Systolic BP must be between 50 and 250 mmHg.</div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Diastolic Blood Pressure (mmHg) *</label>
-                            <input type="number" name="diastolic_bp" value="80" min="30" max="150" class="form-control rounded-3" required>
-                            <small class="text-muted">Normal: &lt; 80 mmHg</small>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Diastolic BP (mmHg) <span class="text-danger">*</span></label>
+                            <input type="number" name="diastolic_bp" id="diastolicBp" value="80" min="30" max="150" class="form-control rounded-3" required>
+                            <small class="text-muted d-block mt-1">Format: <strong>120/80 mmHg</strong> (30–150)</small>
+                            <div class="invalid-feedback">Diastolic BP must be between 30 and 150 mmHg.</div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Height (cm) *</label>
-                            <input type="number" step="0.1" name="height_cm" value="170" min="30" max="250" class="form-control rounded-3" required>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Heart Rate (BPM) <span class="text-danger">*</span></label>
+                            <input type="number" name="heart_rate" id="heartRate" value="72" min="30" max="220" class="form-control rounded-3" required>
+                            <small class="text-muted d-block mt-1">Value between <strong>30–220 BPM</strong></small>
+                            <div class="invalid-feedback">Enter a Heart Rate between 30 and 220 BPM.</div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Weight (kg) *</label>
-                            <input type="number" step="0.1" name="weight_kg" value="70" min="2" max="300" class="form-control rounded-3" required>
-                            <small class="text-muted">BMI will be calculated automatically by the engine</small>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Body Temp (°C) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.1" name="body_temperature" id="bodyTemp" value="36.6" min="35" max="42" class="form-control rounded-3" required>
+                            <small class="text-muted d-block mt-1">Value between <strong>35–42 °C</strong></small>
+                            <div class="invalid-feedback">Enter a Body Temperature between 35 and 42 °C.</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Oxygen Saturation (SpO₂) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.1" name="spo2_percentage" id="spo2" value="98" min="70" max="100" class="form-control rounded-3" required>
+                            <small class="text-muted d-block mt-1">Percentage between <strong>70–100%</strong></small>
+                            <div class="invalid-feedback">Enter Oxygen Saturation between 70% and 100%.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Height (cm) <span class="badge bg-secondary ms-1">Read-Only</span></label>
+                            <input type="number" step="0.1" name="height_cm_display" id="heightDisplay" class="form-control bg-light rounded-3" readonly required>
+                            <small class="text-muted d-block mt-1">Auto-fetched from patient profile</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Weight (kg) <span class="badge bg-secondary ms-1">Read-Only</span></label>
+                            <input type="number" step="0.1" name="weight_kg_display" id="weightDisplay" class="form-control bg-light rounded-3" readonly required>
+                            <small class="text-muted d-block mt-1">Auto-fetched from patient profile</small>
                         </div>
                     </div>
 
                     <!-- 2. Blood Biochemistry -->
-                    <h5 class="fw-bold text-brand-primary border-bottom pb-2 mb-3">2. Blood Biochemistry Metrics</h5>
+                    <h5 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-droplet-fill me-2"></i>2. Blood Biochemistry Metrics</h5>
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Fasting Blood Glucose (mg/dL) *</label>
+                            <label class="form-label fw-semibold">Fasting Blood Glucose (mg/dL) <span class="text-danger">*</span></label>
                             <input type="number" step="0.1" name="fasting_sugar" value="95" min="40" max="600" class="form-control rounded-3" required>
-                            <small class="text-muted">Normal: 70–99 mg/dL</small>
+                            <small class="text-muted d-block mt-1">Value in <strong>mg/dL</strong> (Normal: 70–99 mg/dL)</small>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Postprandial Blood Glucose (mg/dL) *</label>
+                            <label class="form-label fw-semibold">Postprandial Blood Glucose (mg/dL) <span class="text-danger">*</span></label>
                             <input type="number" step="0.1" name="postprandial_sugar" value="130" min="40" max="600" class="form-control rounded-3" required>
-                            <small class="text-muted">Normal: &lt; 140 mg/dL</small>
+                            <small class="text-muted d-block mt-1">Value in <strong>mg/dL</strong> (Normal: &lt; 140 mg/dL)</small>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">Total Cholesterol (mg/dL) *</label>
+                            <label class="form-label fw-semibold">Total Cholesterol (mg/dL) <span class="text-danger">*</span></label>
                             <input type="number" step="0.1" name="total_cholesterol" value="180" min="50" max="500" class="form-control rounded-3" required>
+                            <small class="text-muted d-block mt-1">Value in mg/dL</small>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">HDL Cholesterol (mg/dL) *</label>
+                            <label class="form-label fw-semibold">HDL Cholesterol (mg/dL) <span class="text-danger">*</span></label>
                             <input type="number" step="0.1" name="hdl_cholesterol" value="50" min="10" max="150" class="form-control rounded-3" required>
+                            <small class="text-muted d-block mt-1">Value in mg/dL</small>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">LDL Cholesterol (mg/dL) *</label>
+                            <label class="form-label fw-semibold">LDL Cholesterol (mg/dL) <span class="text-danger">*</span></label>
                             <input type="number" step="0.1" name="ldl_cholesterol" value="100" min="10" max="300" class="form-control rounded-3" required>
+                            <small class="text-muted d-block mt-1">Value in mg/dL</small>
                         </div>
                     </div>
 
                     <!-- 3. Lifestyle Factors -->
-                    <h5 class="fw-bold text-brand-primary border-bottom pb-2 mb-3">3. Lifestyle & Behavioral Indicators</h5>
+                    <h5 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-activity me-2"></i>3. Lifestyle & Behavioral Indicators</h5>
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Smoking Status</label>
@@ -119,11 +155,11 @@
                     </div>
 
                     <!-- 4. Family History & Checklists -->
-                    <h5 class="fw-bold text-brand-primary border-bottom pb-2 mb-3">4. Clinical History & Current Symptoms</h5>
+                    <h5 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-journal-medical me-2"></i>4. Clinical History & Presenting Symptoms</h5>
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Family Medical History Checkboxes</label>
-                            <div class="card bg-light p-3 rounded-3">
+                            <div class="card bg-light p-3 rounded-3 border-0">
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="family_history" value="diabetes" id="famDiab">
                                     <label class="form-check-label" for="famDiab">Family History of Diabetes</label>
@@ -140,8 +176,8 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Presenting Symptoms Checklist</label>
-                            <div class="card bg-light p-3 rounded-3" style="max-height: 140px; overflow-y: auto;">
+                            <label class="form-label fw-semibold">Presenting Symptoms</label>
+                            <div class="card bg-light p-3 rounded-3 border-0 mb-2" style="max-height: 120px; overflow-y: auto;">
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="symptoms" value="chest pain" id="symChest">
                                     <label class="form-check-label" for="symChest">Chest Pain / Tightness</label>
@@ -154,20 +190,19 @@
                                     <input class="form-check-input" type="checkbox" name="symptoms" value="frequent urination" id="symUrination">
                                     <label class="form-check-label" for="symUrination">Frequent Urination / Excessive Thirst</label>
                                 </div>
-                                <div class="form-check mb-2">
+                                <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="symptoms" value="blurry vision" id="symVision">
                                     <label class="form-check-label" for="symVision">Blurred Vision</label>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="symptoms" value="fatigue" id="symFatigue">
-                                    <label class="form-check-label" for="symFatigue">Chronic Fatigue / Dizziness</label>
-                                </div>
                             </div>
+                            <input type="text" name="custom_symptoms" id="customSymptoms" class="form-control rounded-3" placeholder="Additional symptoms (minimum 5 characters)..." minlength="5">
+                            <small class="text-muted">Enter at least <strong>5 characters</strong> for custom symptoms.</small>
+                            <div class="invalid-feedback">Custom symptoms must be at least 5 characters long.</div>
                         </div>
                     </div>
 
                     <!-- 5. Doctor Clinical Impression & Override -->
-                    <h5 class="fw-bold text-brand-primary border-bottom pb-2 mb-3">5. Physician Override & Custom Clinical Notes</h5>
+                    <h5 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-person-badge-fill me-2"></i>5. Physician Override & Diagnosis Notes</h5>
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Doctor Override Level (Optional)</label>
@@ -177,21 +212,81 @@
                                 <option value="MEDIUM">Override to MEDIUM Risk</option>
                                 <option value="HIGH">Override to HIGH Risk</option>
                             </select>
-                            <small class="text-muted">Doctor's clinical judgment overrides computed level if selected</small>
+                            <small class="text-muted d-block mt-1">Doctor's clinical judgment overrides computed level if selected</small>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Physician Notes & Clinical Orders</label>
-                            <textarea name="doctor_notes" class="form-control rounded-3" rows="3" placeholder="Enter clinical observations, diagnostic orders, or custom remarks..."></textarea>
+                            <label class="form-label fw-semibold">Diagnosis Notes & Clinical Orders <span class="text-danger">*</span></label>
+                            <textarea name="doctor_notes" id="doctorNotes" class="form-control rounded-3" rows="3" placeholder="Enter clinical observations, diagnostic orders, or custom remarks..." required></textarea>
+                            <small class="text-muted d-block mt-1">Diagnosis Notes cannot be empty.</small>
+                            <div class="invalid-feedback">Diagnosis Notes & Clinical Orders are required.</div>
                         </div>
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-                        <a href="{% url 'doctor_dashboard' %}" class="btn btn-outline-secondary rounded-3">Cancel</a>
-                        <button type="submit" class="btn btn-brand-primary rounded-3 px-4 py-2 fs-6 fw-bold">Compute Risk & Save Assessment</button>
+                        <a href="{% url 'doctor_dashboard' %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fs-6 fw-bold">
+                            <i class="bi bi-check-circle me-1.5"></i>Compute Risk & Save Assessment
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const patientDataMap = JSON.parse('{{ patient_data_map_json|escapejs }}');
+    const patientSelect = document.getElementById('patientSelect');
+    const heightDisplay = document.getElementById('heightDisplay');
+    const weightDisplay = document.getElementById('weightDisplay');
+    const heightWarning = document.getElementById('heightWarning');
+    const weightWarning = document.getElementById('weightWarning');
+
+    function updatePatientProfileVitals() {
+        const patientId = patientSelect.value;
+        if (patientId && patientDataMap[patientId]) {
+            const data = patientDataMap[patientId];
+            
+            // Height Handling
+            if (data.has_height) {
+                heightDisplay.value = data.height_cm;
+                heightWarning.classList.add('d-none');
+            } else {
+                heightDisplay.value = '';
+                heightWarning.classList.remove('d-none');
+            }
+
+            // Weight Handling
+            if (data.has_weight) {
+                weightDisplay.value = data.weight_kg;
+                weightWarning.classList.add('d-none');
+            } else {
+                weightDisplay.value = '';
+                weightWarning.classList.remove('d-none');
+            }
+        } else {
+            heightDisplay.value = '';
+            weightDisplay.value = '';
+            heightWarning.classList.add('d-none');
+            weightWarning.classList.add('d-none');
+        }
+    }
+
+    patientSelect.addEventListener('change', updatePatientProfileVitals);
+    if (patientSelect.value) {
+        updatePatientProfileVitals();
+    }
+
+    // Bootstrap client-side form validation
+    const form = document.getElementById('riskForm');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    }, false);
+});
+</script>
 {% endblock %}

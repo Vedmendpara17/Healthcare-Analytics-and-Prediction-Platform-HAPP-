@@ -47,10 +47,6 @@
                             <input type="text" name="emergency_contact_phone" value="{{ patient.emergency_contact_phone|default:'' }}" class="form-control rounded-3">
                         </div>
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Known Allergies</label>
-                            <textarea name="allergies" class="form-control rounded-3" rows="2" placeholder="e.g. Penicillin, Peanuts">{{ patient.allergies|default:'' }}</textarea>
-                        </div>
-                        <div class="col-12">
                             <label class="form-label fw-semibold">Chronic Health Conditions</label>
                             <textarea name="chronic_conditions" class="form-control rounded-3" rows="2" placeholder="e.g. Asthma, Type-2 Diabetes">{{ patient.chronic_conditions|default:'' }}</textarea>
                         </div>

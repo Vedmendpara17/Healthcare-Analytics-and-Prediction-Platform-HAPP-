@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'predictions.apps.PredictionsConfig',
     'administration.apps.AdministrationConfig',
     'core.apps.CoreConfig',
+    'prescriptions.apps.PrescriptionsConfig',
+    'backups.apps.BackupsConfig',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -63,7 +65,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'accounts.middleware.SessionTimeoutMiddleware',
 ]
+
+# Security & Session Settings
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+PASSWORD_RESET_TIMEOUT = 600 # 10 minutes for password reset link/token
+SESSION_COOKIE_AGE = 1800 # 30 minutes
+SESSION_TIMEOUT_SECONDS = 1800
+SESSION_SAVE_EVERY_REQUEST = True
 
 ROOT_URLCONF = 'config.urls'
 

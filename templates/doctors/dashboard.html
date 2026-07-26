@@ -97,7 +97,7 @@
                         </thead>
                         <tbody>
                             {% for app in todays_appointments %}
-                                <tr>
+                                <tr class="{% if app.is_past %}bg-light text-muted opacity-75{% endif %}">
                                     <td>
                                         <span class="badge bg-light text-dark border px-2.5 py-1.5 rounded-3 fw-semibold">
                                             <i class="bi bi-clock me-1 text-primary"></i>{{ app.get_time_slot_display_text }}
@@ -109,7 +109,7 @@
                                                 {{ app.patient.first_name|first|default:app.patient.username|first|upper }}
                                             </div>
                                             <div>
-                                                <div class="fw-bold text-dark mb-0">{{ app.patient.get_full_name|default:app.patient.username }}</div>
+                                                <div class="fw-bold {% if app.is_past %}text-secondary{% else %}text-dark{% endif %} mb-0">{{ app.patient.get_full_name|default:app.patient.username }}</div>
                                                 <span class="text-muted small">ID: #{{ app.patient.id }}</span>
                                             </div>
                                         </div>
@@ -120,7 +120,9 @@
                                         </span>
                                     </td>
                                     <td>
-                                        {% if app.status == 'APPROVED' %}
+                                        {% if app.is_past and app.status != 'COMPLETED' and app.status != 'CANCELLED' and app.status != 'REJECTED' %}
+                                            <span class="badge bg-secondary text-white rounded-pill px-2.5 py-1.5"><i class="bi bi-clock-history me-1"></i>Expired / Past</span>
+                                        {% elif app.status == 'APPROVED' %}
                                             <span class="app-status-pill status-approved"><i class="bi bi-check-circle-fill me-1"></i>Approved</span>
                                         {% elif app.status == 'PENDING' %}
                                             <span class="app-status-pill status-pending"><i class="bi bi-hourglass-split me-1"></i>Pending</span>

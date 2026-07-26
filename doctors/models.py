@@ -1,14 +1,15 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 
 def validate_image_file(value):
     ext = value.name.split('.')[-1].lower()
     valid_extensions = ['jpg', 'jpeg', 'png']
     if ext not in valid_extensions:
-        raise models.ValidationError("Only .jpg, .jpeg, and .png image files are allowed.")
+        raise ValidationError("Only .jpg, .jpeg, and .png image files are allowed.")
     if value.size > 5 * 1024 * 1024:
-        raise models.ValidationError("Image file size must not exceed 5MB.")
+        raise ValidationError("Image file size must not exceed 5MB.")
 
 class DoctorProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='doctor_profile')

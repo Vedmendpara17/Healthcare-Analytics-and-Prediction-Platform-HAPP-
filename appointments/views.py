@@ -120,8 +120,21 @@ def available_slots_api(request):
 
 @patient_required
 def patient_appointments_list_view(request):
-    appointments = Appointment.objects.filter(patient=request.user).select_related('doctor__user', 'doctor__specialization').order_by('-date')
-    return render(request, 'appointments/patient_appointments.html', {'appointments': appointments})
+    appointments = list(Appointment.objects.filter(patient=request.user).select_related('doctor__user', 'doctor__specialization').order_by('-date'))
+    
+    total_count = len(appointments)
+    upcoming_count = sum(1 for a in appointments if not a.is_past and a.status not in ['CANCELLED', 'REJECTED'])
+    rescheduled_count = sum(1 for a in appointments if a.status == 'RESCHEDULED')
+    cancelled_count = sum(1 for a in appointments if a.status in ['CANCELLED', 'REJECTED'])
+
+    context = {
+        'appointments': appointments,
+        'total_count': total_count,
+        'upcoming_count': upcoming_count,
+        'rescheduled_count': rescheduled_count,
+        'cancelled_count': cancelled_count,
+    }
+    return render(request, 'appointments/patient_appointments.html', context)
 
 
 @login_required
@@ -187,3 +200,103 @@ def calendar_events_api(request):
             })
 
     return JsonResponse(events, safe=False)
+
+
+@patient_required
+def reschedule_appointment_view(request, appointment_id):
+    appointment = get_object_or_404(Appointment, id=appointment_id, patient=request.user)
+
+    if appointment.status in [Appointment.Status.COMPLETED, Appointment.Status.CANCELLED, Appointment.Status.REJECTED]:
+        messages.error(request, f"Cannot reschedule an appointment that is already {appointment.get_status_display().lower()}.")
+        return redirect('patient_appointments_list')
+
+    if request.method == 'POST':
+        new_date_str = request.POST.get('date')
+        new_time_slot = request.POST.get('time_slot')
+        reason = request.POST.get('reason', '').strip()
+
+        if not new_date_str or not new_time_slot:
+            messages.error(request, "Please select both a date and a time slot to reschedule.")
+        else:
+            try:
+                new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                messages.error(request, "Invalid date format.")
+                return redirect('reschedule_appointment', appointment_id=appointment.id)
+
+            if new_date < date.today():
+                messages.error(request, "Cannot reschedule to a past date.")
+                return redirect('reschedule_appointment', appointment_id=appointment.id)
+
+            if new_date == date.today():
+                try:
+                    hour, minute = map(int, new_time_slot.split(':'))
+                    slot_time = datetime.strptime(f"{hour}:{minute}", "%H:%M").time()
+                    if datetime.now().time() > slot_time:
+                        messages.error(request, "Selected time slot has already passed for today. Please pick a future slot.")
+                        return redirect('reschedule_appointment', appointment_id=appointment.id)
+                except Exception:
+                    pass
+
+            # Prevent duplicate appointment for the same patient on same date and slot
+            duplicate_patient_app = Appointment.objects.filter(
+                patient=request.user,
+                date=new_date,
+                time_slot=new_time_slot
+            ).exclude(id=appointment.id).exclude(status__in=[Appointment.Status.CANCELLED, Appointment.Status.REJECTED]).exists()
+
+            if duplicate_patient_app:
+                messages.error(request, "You already have another active appointment scheduled at this exact date and time.")
+                return redirect('reschedule_appointment', appointment_id=appointment.id)
+
+            # Check doctor slot conflict
+            doctor_slot_taken = Appointment.objects.filter(
+                doctor=appointment.doctor,
+                date=new_date,
+                time_slot=new_time_slot
+            ).exclude(id=appointment.id).exclude(status__in=[Appointment.Status.CANCELLED, Appointment.Status.REJECTED]).exists()
+
+            if doctor_slot_taken:
+                messages.error(request, f"The selected time slot ({new_time_slot}) with Dr. {appointment.doctor.user.get_full_name()} is already booked. Please choose another slot.")
+                return redirect('reschedule_appointment', appointment_id=appointment.id)
+
+            # Update Appointment
+            previous_date_time = f"{appointment.date.strftime('%B %d, %Y')} ({appointment.get_time_slot_display_text()})"
+            appointment.date = new_date
+            appointment.time_slot = new_time_slot
+            appointment.status = Appointment.Status.RESCHEDULED
+            appointment.save()
+
+            # Send In-App Notification to Doctor
+            Notification.objects.create(
+                user=appointment.doctor.user,
+                message=f"Patient {request.user.get_full_name()} rescheduled Appointment #{appointment.id} to {new_date.strftime('%B %d, %Y')} ({appointment.get_time_slot_display_text()}).",
+                notif_type="APPOINTMENT"
+            )
+
+            # Send Email Notification to Doctor & Patient
+            send_appointment_email(EmailLog.EmailType.RESCHEDULED_DOCTOR, appointment, extra_context={
+                'previous_date_time': previous_date_time,
+                'reschedule_reason': reason
+            })
+            send_appointment_email(EmailLog.EmailType.RESCHEDULED, appointment, extra_context={
+                'previous_date_time': previous_date_time,
+                'reschedule_reason': reason
+            })
+
+            AuditLog.objects.create(
+                actor=request.user,
+                action="RESCHEDULE_APPOINTMENT",
+                details=f"Rescheduled appointment #{appointment.id} to {new_date} ({new_time_slot})"
+            )
+
+            messages.success(request, f"Appointment successfully rescheduled to {new_date.strftime('%B %d, %Y')} ({appointment.get_time_slot_display_text()})!")
+            return redirect('patient_appointments_list')
+
+    context = {
+        'appointment': appointment,
+        'doctor': appointment.doctor,
+        'min_date': date.today().strftime('%Y-%m-%d'),
+        'time_slots': Appointment.TIME_SLOT_CHOICES,
+    }
+    return render(request, 'appointments/reschedule_appointment.html', context)

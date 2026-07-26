@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Reschedule Appointment | Patient Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5 bg-white">
+                <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                        <i class="bi bi-calendar-event-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h3 class="fw-bold mb-0 text-dark">Reschedule Appointment #{{ appointment.id }}</h3>
+                        <small class="text-muted">Select a new date and available time slot for your medical consultation.</small>
+                    </div>
+                </div>
+
+                <!-- Current Appointment Details Card -->
+                <div class="card bg-light border-0 rounded-4 p-4 mb-4">
+                    <div class="d-flex align-items-center gap-3">
+                        {% if doctor.profile_photo %}
+                            <img src="{{ doctor.profile_photo.url }}" class="rounded-circle object-fit-cover" style="width: 56px; height: 56px;" alt="Doctor">
+                        {% else %}
+                            <div class="patient-avatar d-flex align-items-center justify-content-center fw-bold fs-4" style="width: 56px; height: 56px;">
+                                {{ doctor.user.first_name|first|default:"D" }}
+                            </div>
+                        {% endif %}
+                        <div>
+                            <div class="fw-bold text-dark fs-5">Dr. {{ doctor.user.get_full_name }}</div>
+                            <div class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1 font-heading mb-1">
+                                {{ doctor.specialization.name|default:"General Medicine" }}
+                            </div>
+                            <small class="text-muted d-block"><i class="bi bi-hospital me-1"></i>{{ doctor.hospital_name }}</small>
+                        </div>
+                    </div>
+                    <hr class="my-3 text-secondary opacity-25">
+                    <div class="row g-2 text-dark small font-heading">
+                        <div class="col-md-6"><strong>Current Date:</strong> <span class="badge bg-light text-dark border">{{ appointment.date|date:"F d, Y" }}</span></div>
+                        <div class="col-md-6"><strong>Current Slot:</strong> <span class="badge bg-light text-dark border">{{ appointment.get_time_slot_display_text }}</span></div>
+                    </div>
+                </div>
+
+                <!-- Reschedule Form -->
+                <form method="post" id="rescheduleForm" class="needs-validation" novalidate>
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-dark">Select New Consultation Date <span class="text-danger">*</span></label>
+                        <input type="date" name="date" id="rescheduleDate" min="{{ min_date }}" value="{{ appointment.date|date:'Y-m-d' }}" class="form-control form-control-lg rounded-3" required>
+                        <small class="text-muted">Please pick a future date for your rescheduled appointment.</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-dark">Select Available Time Slot <span class="text-danger">*</span></label>
+                        <select name="time_slot" id="rescheduleSlot" class="form-select form-select-lg rounded-3" required>
+                            <option value="">-- Choose Time Slot --</option>
+                            {% for code, label in time_slots %}
+                                <option value="{{ code }}" {% if appointment.time_slot == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted d-block mt-1" id="slotAvailabilityStatus"><i class="bi bi-info-circle me-1"></i>Real-time doctor slot availability</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-dark">Reason for Rescheduling (Optional)</label>
+                        <textarea name="reason" class="form-control rounded-3" rows="3" placeholder="e.g., Schedule conflict, feeling unwell, personal reason..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a href="{% url 'patient_appointments_list' %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fw-bold shadow-sm" id="submitBtn">
+                            <i class="bi bi-check-circle me-1.5"></i>Confirm Reschedule
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const doctorId = "{{ doctor.id }}";
+    const dateInput = document.getElementById('rescheduleDate');
+    const slotSelect = document.getElementById('rescheduleSlot');
+    const availabilityStatus = document.getElementById('slotAvailabilityStatus');
+
+    function fetchAvailableSlots(dateVal) {
+        if (!dateVal) return;
+
+        availabilityStatus.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i>Checking doctor schedule availability...';
+
+        fetch(`/appointments/api/available-slots/?doctor_id=${doctorId}&date=${dateVal}`)
+            .then(res => res.json())
+            .then(data => {
+                slotSelect.innerHTML = '<option value="">-- Choose Time Slot --</option>';
+                if (data.slots && data.slots.length > 0) {
+                    let availableCount = 0;
+                    data.slots.forEach(s => {
+                        const option = document.createElement('option');
+                        option.value = s.code;
+                        option.textContent = s.label + (s.available ? ' (Available)' : ' (Booked)');
+                        if (!s.available) {
+                            option.disabled = true;
+                        } else {
+                            availableCount++;
+                        }
+                        slotSelect.appendChild(option);
+                    });
+                    availabilityStatus.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>${availableCount} time slots available for this date.</span>`;
+                } else {
+                    availabilityStatus.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle-fill me-1"></i>No available slots for this date. Please pick another date.</span>';
+                }
+            })
+            .catch(err => {
+                availabilityStatus.innerHTML = '<span class="text-muted"><i class="bi bi-info-circle me-1"></i>Real-time availability update.</span>';
+            });
+    }
+
+    if (dateInput) {
+        dateInput.addEventListener('change', function() {
+            fetchAvailableSlots(this.value);
+        });
+    }
+});
+</script>
+{% endblock %}

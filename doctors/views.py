@@ -1,6 +1,7 @@
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db.models import Count, Q
 
@@ -225,17 +226,148 @@ def edit_doctor_profile_view(request):
     doctor = get_object_or_404(DoctorProfile, user=request.user)
 
     if request.method == 'POST':
-        doctor.qualification = request.POST.get('qualification', doctor.qualification)
-        doctor.experience_years = int(request.POST.get('experience_years', doctor.experience_years))
-        doctor.hospital_name = request.POST.get('hospital_name', doctor.hospital_name)
-        doctor.consultation_fee = float(request.POST.get('consultation_fee', doctor.consultation_fee))
-        doctor.bio = request.POST.get('bio', doctor.bio)
+        qual = request.POST.get('qualification')
+        if qual is not None:
+            doctor.qualification = qual.strip()
+        
+        try:
+            doctor.experience_years = int(request.POST.get('experience_years', doctor.experience_years))
+        except (ValueError, TypeError):
+            pass
+
+        hosp = request.POST.get('hospital_name')
+        if hosp is not None:
+            doctor.hospital_name = hosp.strip()
+        
+        try:
+            doctor.consultation_fee = float(request.POST.get('consultation_fee', doctor.consultation_fee))
+        except (ValueError, TypeError):
+            pass
+
+        bio = request.POST.get('bio')
+        if bio is not None:
+            doctor.bio = bio.strip()
         
         if request.FILES.get('profile_photo'):
-            doctor.profile_photo = request.FILES.get('profile_photo')
+            photo = request.FILES.get('profile_photo')
+            try:
+                from doctors.models import validate_image_file
+                validate_image_file(photo)
+                doctor.profile_photo = photo
+            except ValidationError as ve:
+                messages.error(request, str(ve.message if hasattr(ve, 'message') else ve))
+                return render(request, 'doctors/edit_profile.html', {'doctor': doctor})
 
         doctor.save()
-        messages.success(request, "Profile updated successfully.")
-        return redirect('doctor_dashboard')
+        messages.success(request, "Doctor profile and photo updated successfully.")
+        return redirect('edit_doctor_profile')
 
     return render(request, 'doctors/edit_profile.html', {'doctor': doctor})
+
+
+# --- Doctor Medical Reports Workspace Views ---
+from django.core.paginator import Paginator
+from patients.models import MedicalReport
+
+@doctor_required
+def doctor_medical_reports_view(request):
+    doctor = get_object_or_404(DoctorProfile, user=request.user)
+
+    # Get patients assigned to this doctor through appointments
+    assigned_patient_user_ids = Appointment.objects.filter(doctor=doctor).values_list('patient_id', flat=True).distinct()
+    assigned_patients = PatientProfile.objects.filter(user_id__in=assigned_patient_user_ids).select_related('user')
+
+    reports_qs = MedicalReport.objects.filter(
+        Q(doctor=doctor) | Q(patient__user_id__in=assigned_patient_user_ids),
+        is_deleted=False
+    ).select_related('patient', 'patient__user', 'appointment').distinct()
+
+    search_query = request.GET.get('q', '').strip()
+    category_filter = request.GET.get('category', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    patient_filter = request.GET.get('patient_id', '').strip()
+
+    if search_query:
+        reports_qs = reports_qs.filter(
+            Q(report_name__icontains=search_query) |
+            Q(patient__user__first_name__icontains=search_query) |
+            Q(patient__user__last_name__icontains=search_query)
+        )
+
+    if category_filter:
+        reports_qs = reports_qs.filter(report_category=category_filter)
+
+    if status_filter:
+        reports_qs = reports_qs.filter(review_status=status_filter)
+
+    if patient_filter:
+        reports_qs = reports_qs.filter(patient_id=patient_filter)
+
+    reports_qs = reports_qs.order_by('-uploaded_at')
+
+    paginator = Paginator(reports_qs, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    total_count = reports_qs.count()
+    pending_count = MedicalReport.objects.filter(
+        Q(doctor=doctor) | Q(patient__user_id__in=assigned_patient_user_ids),
+        is_deleted=False, review_status='PENDING'
+    ).distinct().count()
+
+    context = {
+        'doctor': doctor,
+        'page_obj': page_obj,
+        'reports': page_obj.object_list,
+        'assigned_patients': assigned_patients,
+        'categories': MedicalReport.REPORT_CATEGORIES,
+        'statuses': MedicalReport.STATUS_CHOICES,
+        'total_count': total_count,
+        'pending_count': pending_count,
+        'search_query': search_query,
+        'selected_category': category_filter,
+        'selected_status': status_filter,
+        'selected_patient': patient_filter,
+    }
+    return render(request, 'doctors/medical_reports.html', context)
+
+
+@doctor_required
+def doctor_review_report_view(request, report_id):
+    doctor = get_object_or_404(DoctorProfile, user=request.user)
+    assigned_patient_user_ids = Appointment.objects.filter(doctor=doctor).values_list('patient_id', flat=True).distinct()
+
+    report = get_object_or_404(
+        MedicalReport,
+        Q(doctor=doctor) | Q(patient__user_id__in=assigned_patient_user_ids),
+        id=report_id,
+        is_deleted=False
+    )
+
+    if request.method == 'POST':
+        status = request.POST.get('review_status', 'REVIEWED')
+        notes = request.POST.get('doctor_notes', '').strip()
+
+        report.review_status = status
+        report.doctor_notes = notes
+        report.doctor = doctor
+        report.save()
+
+        AuditLog.objects.create(
+            actor=request.user,
+            action="REVIEW_MEDICAL_REPORT",
+            details=f"Doctor Dr. {doctor.user.get_full_name()} updated status to '{status}' for report '{report.report_name}'",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
+        # Notify Patient
+        Notification.objects.create(
+            user=report.patient.user,
+            message=f"Dr. {doctor.user.get_full_name() or doctor.user.username} reviewed your medical report '{report.report_name}'. Notes: {notes[:60]}...",
+            notif_type="INFO",
+            link="/patients/reports/"
+        )
+
+        messages.success(request, f"Review notes updated for report '{report.report_name}'.")
+
+    return redirect('doctor_medical_reports')

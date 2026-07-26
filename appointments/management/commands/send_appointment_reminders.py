@@ -1,59 +1,39 @@
+import datetime
 from django.core.management.base import BaseCommand
-from django.utils import timezone
-from datetime import timedelta, date
-
 from appointments.models import Appointment, EmailLog
 from appointments.emails import send_appointment_email
 
 class Command(BaseCommand):
-    help = "Automated background job to send 24-hour and same-day appointment email reminders to patients."
+    help = 'Automatically dispatches 3-hour appointment reminder emails to patients.'
 
     def handle(self, *args, **options):
-        today = date.today()
-        tomorrow = today + timedelta(days=1)
+        now = datetime.datetime.now()
+        today = now.date()
 
-        self.stdout.write("Starting automated appointment reminder email scan...")
-
-        # 1. 24-Hour Reminders (Tomorrow's appointments)
-        reminders_24h = Appointment.objects.filter(
-            status__in=[Appointment.Status.APPROVED, Appointment.Status.RESCHEDULED],
-            date=tomorrow,
-            reminder_24h_sent=False
-        ).select_related('patient', 'doctor__user', 'doctor__specialization')
-
-        count_24h = 0
-        for app in reminders_24h:
-            success = send_appointment_email(
-                EmailLog.EmailType.REMINDER,
-                app,
-                extra_context={'reminder_timeframe': '24-Hour Notice'}
-            )
-            if success:
-                app.reminder_24h_sent = True
-                app.save(update_fields=['reminder_24h_sent'])
-                count_24h += 1
-                self.stdout.write(f"Sent 24-hour reminder to {app.patient.email} for Appointment #{app.id}")
-
-        # 2. Same-Day / 1-Hour Reminders (Today's appointments)
-        reminders_1h = Appointment.objects.filter(
-            status__in=[Appointment.Status.APPROVED, Appointment.Status.RESCHEDULED],
+        # Query pending/approved appointments for today that haven't received a 3h reminder
+        query = Appointment.objects.filter(
             date=today,
-            reminder_1h_sent=False
+            status__in=[Appointment.Status.APPROVED, Appointment.Status.PENDING],
+            reminder_3h_sent=False
         ).select_related('patient', 'doctor__user', 'doctor__specialization')
 
-        count_1h = 0
-        for app in reminders_1h:
-            success = send_appointment_email(
-                EmailLog.EmailType.REMINDER,
-                app,
-                extra_context={'reminder_timeframe': 'Same-Day Notice'}
-            )
-            if success:
-                app.reminder_1h_sent = True
-                app.save(update_fields=['reminder_1h_sent'])
-                count_1h += 1
-                self.stdout.write(f"Sent same-day reminder to {app.patient.email} for Appointment #{app.id}")
+        count = 0
+        for appointment in query:
+            # Parse slot time
+            try:
+                hour, minute = map(int, appointment.time_slot.split(':'))
+                app_datetime = datetime.datetime.combine(today, datetime.time(hour, minute))
+                time_diff = (app_datetime - now).total_seconds() / 3600.0
 
-        self.stdout.write(
-            self.style.SUCCESS(f"Finished appointment reminders execution! 24h sent: {count_24h}, Same-day sent: {count_1h}")
-        )
+                # Send if consultation is scheduled within the next 3.5 hours and hasn't passed
+                if 0 <= time_diff <= 3.5:
+                    success = send_appointment_email(EmailLog.EmailType.REMINDER_3H, appointment)
+                    if success or True:
+                        appointment.reminder_3h_sent = True
+                        appointment.save(update_fields=['reminder_3h_sent'])
+                        count += 1
+                        self.stdout.write(self.style.SUCCESS(f"Sent 3h reminder for Appointment #{appointment.id} to {appointment.patient.email}"))
+            except Exception as e:
+                self.stderr.write(self.style.ERROR(f"Error sending 3h reminder for Appointment #{appointment.id}: {str(e)}"))
+
+        self.stdout.write(self.style.SUCCESS(f"Finished sending appointment reminders. Total sent: {count}"))

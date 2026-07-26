@@ -36,26 +36,63 @@ def create_risk_assessment_view(request, patient_id=None):
 
         patient = get_object_or_404(PatientProfile, id=p_id)
         
-        # Read form inputs
-        systolic_bp = int(request.POST.get('systolic_bp', 120))
-        diastolic_bp = int(request.POST.get('diastolic_bp', 80))
-        fasting_sugar = float(request.POST.get('fasting_sugar', 90.0))
-        postprandial_sugar = float(request.POST.get('postprandial_sugar', 120.0))
-        total_cholesterol = float(request.POST.get('total_cholesterol', 180.0))
-        hdl_cholesterol = float(request.POST.get('hdl_cholesterol', 50.0))
-        ldl_cholesterol = float(request.POST.get('ldl_cholesterol', 100.0))
-        height_cm = float(request.POST.get('height_cm', patient.height_cm))
-        weight_kg = float(request.POST.get('weight_kg', patient.weight_kg))
+        # Auto-fetch Height and Weight from Patient Profile as read-only values
+        height_cm = patient.height_cm
+        weight_kg = patient.weight_kg
+
+        # Read & Validate Form Vitals
+        try:
+            systolic_bp = int(request.POST.get('systolic_bp', 120))
+            diastolic_bp = int(request.POST.get('diastolic_bp', 80))
+            heart_rate = int(request.POST.get('heart_rate', 72))
+            body_temperature = float(request.POST.get('body_temperature', 36.6))
+            spo2_percentage = float(request.POST.get('spo2_percentage', 98.0))
+            fasting_sugar = float(request.POST.get('fasting_sugar', 90.0))
+            postprandial_sugar = float(request.POST.get('postprandial_sugar', 120.0))
+            total_cholesterol = float(request.POST.get('total_cholesterol', 180.0))
+            hdl_cholesterol = float(request.POST.get('hdl_cholesterol', 50.0))
+            ldl_cholesterol = float(request.POST.get('ldl_cholesterol', 100.0))
+        except (ValueError, TypeError):
+            messages.error(request, "Please enter valid numeric values for all clinical vitals.")
+            return redirect('create_risk_assessment')
+
+        # Form Validation Rules
+        errors = []
+        if not (50 <= systolic_bp <= 250 and 30 <= diastolic_bp <= 150):
+            errors.append("Blood Pressure must be in a valid range e.g. 120/80 mmHg.")
+        if not (30 <= heart_rate <= 220):
+            errors.append("Heart Rate must be between 30 and 220 BPM.")
+        if not (35.0 <= body_temperature <= 42.0):
+            errors.append("Body Temperature must be between 35 and 42 °C.")
+        if not (70.0 <= spo2_percentage <= 100.0):
+            errors.append("Oxygen Saturation (SpO₂) must be between 70% and 100%.")
+
+        symptoms_text_custom = request.POST.get('custom_symptoms', '').strip()
+        symptoms_list = request.POST.getlist('symptoms')
+        if symptoms_text_custom:
+            symptoms_list.append(symptoms_text_custom)
+            if len(symptoms_text_custom) < 5:
+                errors.append("Custom symptoms input must be at least 5 characters.")
+
+        doctor_notes = request.POST.get('doctor_notes', '').strip()
+        if not doctor_notes:
+            errors.append("Diagnosis Notes & Clinical Orders cannot be empty.")
+
+        if errors:
+            for err in errors:
+                messages.error(request, err)
+            return render(request, 'predictions/assessment_form.html', {
+                'doctor': doctor,
+                'selected_patient': patient,
+                'patients': patients,
+            })
+
         smoking_status = request.POST.get('smoking_status', 'never')
         alcohol_consumption = request.POST.get('alcohol_consumption', 'none')
         physical_activity = request.POST.get('physical_activity', 'moderate')
-        
         family_history_list = request.POST.getlist('family_history')
         chronic_conditions_list = request.POST.getlist('chronic_conditions')
-        symptoms_list = request.POST.getlist('symptoms')
-        
         doctor_override_level = request.POST.get('doctor_override_level', '').strip()
-        doctor_notes = request.POST.get('doctor_notes', '').strip()
 
         # Build payload for RiskPredictor engine
         input_data = {
@@ -68,8 +105,8 @@ def create_risk_assessment_view(request, patient_id=None):
             'total_cholesterol': total_cholesterol,
             'hdl_cholesterol': hdl_cholesterol,
             'ldl_cholesterol': ldl_cholesterol,
-            'height_cm': height_cm,
-            'weight_kg': weight_kg,
+            'height_cm': height_cm if height_cm else 170.0,
+            'weight_kg': weight_kg if weight_kg else 70.0,
             'smoking_status': smoking_status,
             'alcohol_consumption': alcohol_consumption,
             'physical_activity': physical_activity,
@@ -88,13 +125,16 @@ def create_risk_assessment_view(request, patient_id=None):
             gender=patient.gender,
             systolic_bp=systolic_bp,
             diastolic_bp=diastolic_bp,
+            heart_rate=heart_rate,
+            body_temperature=body_temperature,
+            spo2_percentage=spo2_percentage,
             fasting_sugar=fasting_sugar,
             postprandial_sugar=postprandial_sugar,
             total_cholesterol=total_cholesterol,
             hdl_cholesterol=hdl_cholesterol,
             ldl_cholesterol=ldl_cholesterol,
-            height_cm=height_cm,
-            weight_kg=weight_kg,
+            height_cm=height_cm if height_cm else 170.0,
+            weight_kg=weight_kg if weight_kg else 70.0,
             bmi=prediction_result['bmi'],
             smoking_status=smoking_status,
             alcohol_consumption=alcohol_consumption,
@@ -128,10 +168,21 @@ def create_risk_assessment_view(request, patient_id=None):
         messages.success(request, f"Risk assessment successfully calculated! Final Risk Level: {assessment.final_level}.")
         return redirect('assessment_detail', assessment_id=assessment.id)
 
+    # Prepare patients map for Javascript client-side read-only auto-fill
+    patient_data_map = {}
+    for p in patients:
+        patient_data_map[p.id] = {
+            'height_cm': p.height_cm,
+            'weight_kg': p.weight_kg,
+            'has_height': bool(p.height_cm and p.height_cm > 0),
+            'has_weight': bool(p.weight_kg and p.weight_kg > 0),
+        }
+
     context = {
         'doctor': doctor,
         'selected_patient': selected_patient,
         'patients': patients,
+        'patient_data_map_json': json.dumps(patient_data_map),
     }
     return render(request, 'predictions/assessment_form.html', context)
 

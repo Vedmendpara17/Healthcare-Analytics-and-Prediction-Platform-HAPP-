@@ -49,11 +49,23 @@ def send_appointment_email(email_type, appointment, extra_context=None):
             'subject': f"[Rescheduled] Appointment #{appointment.id} with Dr. {doctor_user.get_full_name()}",
             'template': 'emails/appointment_rescheduled_patient.html',
         },
+        EmailLog.EmailType.RESCHEDULED_DOCTOR: {
+            'recipient_email': doctor_user.email,
+            'recipient_type': EmailLog.RecipientType.DOCTOR,
+            'subject': f"[Rescheduled] Patient {patient.get_full_name()} Rescheduled Appointment #{appointment.id}",
+            'template': 'emails/appointment_rescheduled_doctor.html',
+        },
         EmailLog.EmailType.REMINDER: {
             'recipient_email': patient.email,
             'recipient_type': EmailLog.RecipientType.PATIENT,
             'subject': f"[Reminder] Upcoming Appointment #{appointment.id} on {appointment.date.strftime('%b %d, %Y')}",
             'template': 'emails/appointment_reminder_patient.html',
+        },
+        EmailLog.EmailType.REMINDER_3H: {
+            'recipient_email': patient.email,
+            'recipient_type': EmailLog.RecipientType.PATIENT,
+            'subject': f"[Urgent 3-Hour Reminder] Today's Appointment #{appointment.id} with Dr. {doctor_user.get_full_name()}",
+            'template': 'emails/appointment_reminder_3h_patient.html',
         },
         EmailLog.EmailType.CANCELLED_BY_PATIENT: {
             'recipient_email': doctor_user.email,

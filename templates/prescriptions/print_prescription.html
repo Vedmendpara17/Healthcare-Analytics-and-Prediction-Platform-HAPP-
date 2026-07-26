@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Print e-Prescription #{{ prescription.prescription_number }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; background-color: #fff; }
+            .print-card { border: none !important; shadow: none !important; }
+        }
+        body { background-color: #f8fafc; font-family: 'Segoe UI', Arial, sans-serif; }
+    </style>
+</head>
+<body class="py-4">
+    <div class="container" style="max-width: 800px;">
+        <div class="no-print d-flex justify-content-between align-items-center mb-3">
+            <a href="{% url 'prescription_detail' prescription.id %}" class="btn btn-outline-secondary btn-sm">&larr; Back to Details</a>
+            <button onclick="window.print()" class="btn btn-primary btn-sm"><i class="bi bi-printer"></i> Print Now</button>
+        </div>
+
+        <div class="card border p-4 p-md-5 bg-white print-card rounded-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-start border-bottom pb-3 mb-4">
+                <div>
+                    <h3 class="fw-bold text-success mb-1">HEALTHCARE ANALYTICS & PREDICTION PLATFORM</h3>
+                    <div class="fw-semibold">Central Multispecialty Hospital</div>
+                    <small class="text-muted">123 Healthcare Boulevard, Medical District • Tel: +1 (800) 555-HAPP</small>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-dark fs-6">Rx: {{ prescription.prescription_number }}</span>
+                    <div class="small text-muted mt-1">Date: {{ prescription.created_at|date:"Y-m-d" }}</div>
+                </div>
+            </div>
+
+            <!-- Doctor & Patient -->
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <div class="bg-light p-3 rounded border">
+                        <div class="fw-bold text-uppercase small text-secondary mb-1">Attending Doctor</div>
+                        <div class="fw-bold fs-6">Dr. {{ prescription.doctor.user.get_full_name }}</div>
+                        <div class="small text-muted">{{ prescription.doctor.specialization.name|default:"General Medicine" }}</div>
+                        <div class="small text-muted">Lic No: {{ prescription.doctor.license_number }}</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="bg-light p-3 rounded border">
+                        <div class="fw-bold text-uppercase small text-secondary mb-1">Patient Details</div>
+                        <div class="fw-bold fs-6">{{ prescription.patient.get_full_name }}</div>
+                        <div class="small text-muted">Patient ID: #{{ prescription.patient.id }}</div>
+                        <div class="small text-muted">Age/Gender: {{ patient_profile.age|default:"N/A" }} Yrs / {{ patient_profile.gender|default:"N/A" }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis -->
+            <div class="p-3 bg-light rounded border mb-4">
+                <strong>Diagnosis:</strong> {{ prescription.diagnosis }}
+                {% if prescription.symptoms %}
+                    <br><strong>Symptoms:</strong> {{ prescription.symptoms }}
+                {% endif %}
+            </div>
+
+            <!-- Medicine Table -->
+            <h5 class="fw-bold mb-2">Rx - Medication Orders</h5>
+            <table class="table table-bordered align-middle mb-4">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Medicine</th>
+                        <th>Strength</th>
+                        <th>Dosage</th>
+                        <th>Timing</th>
+                        <th>Duration</th>
+                        <th>Instruction</th>
+                        <th>Qty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in medicines %}
+                        <tr>
+                            <td><strong>{{ m.medicine_name }}</strong><br><small class="text-muted">{{ m.medicine_type }}</small></td>
+                            <td>{{ m.strength }}</td>
+                            <td>{{ m.dosage }}</td>
+                            <td>{% if m.morning %}1{% else %}0{% endif %}-{% if m.afternoon %}1{% else %}0{% endif %}-{% if m.night %}1{% else %}0{% endif %}</td>
+                            <td>{{ m.duration }}</td>
+                            <td>{{ m.meal_instruction }}</td>
+                            <td>{{ m.quantity }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Footer -->
+            <div class="row align-items-end pt-4 border-top">
+                <div class="col-6">
+                    {% if prescription.follow_up_date %}
+                        <strong>Follow-up Date:</strong> {{ prescription.follow_up_date|date:"F d, Y" }}
+                    {% endif %}
+                </div>
+                <div class="col-6 text-end">
+                    <div class="fw-bold">Dr. {{ prescription.doctor.user.get_full_name }}</div>
+                    <small class="text-muted d-block">Digitally Signed & Certified</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if auto_print %}
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() { window.print(); }, 500);
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

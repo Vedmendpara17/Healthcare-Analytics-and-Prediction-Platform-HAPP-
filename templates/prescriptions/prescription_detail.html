@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}e-Prescription {{ prescription.prescription_number }} | HAPP Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Action Toolbar -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2 rounded-pill font-heading fw-bold">
+                        <i class="bi bi-file-earmark-medical me-1.5"></i>{{ prescription.prescription_number }}
+                    </span>
+                    {% if prescription.prescription_status == 'FINALIZED' %}
+                        <span class="badge bg-success text-white px-3 py-2 rounded-pill font-heading fw-semibold"><i class="bi bi-shield-check me-1"></i>Finalized Record</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill font-heading fw-semibold"><i class="bi bi-pencil-fill me-1"></i>Draft Prescription</span>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex gap-2">
+                    {% if can_edit %}
+                        <a href="{% url 'edit_prescription' prescription.id %}" class="btn btn-outline-warning rounded-3 fw-semibold">
+                            <i class="bi bi-pencil me-1.5"></i>Edit Draft
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'print_prescription' prescription.id %}" target="_blank" class="btn btn-outline-secondary rounded-3 fw-semibold">
+                        <i class="bi bi-printer me-1.5"></i>Print
+                    </a>
+                    <a href="{% url 'download_prescription_pdf' prescription.id %}" class="btn btn-primary rounded-3 px-4 fw-semibold shadow-sm">
+                        <i class="bi bi-file-earmark-pdf me-1.5"></i>Download Official PDF
+                    </a>
+                </div>
+            </div>
+
+            <!-- Official e-Prescription Document Card -->
+            <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5 bg-white">
+                <!-- Header Banner -->
+                <div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4" style="border-bottom-color: #0f766e !important; border-bottom-width: 2px !important;">
+                    <div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-teal text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" style="width: 56px; height: 56px; background-color: #0f766e; font-size: 28px;">
+                                Rx
+                            </div>
+                            <div>
+                                <h3 class="fw-bold mb-0 font-heading" style="color: #0f766e;">HEALTHCARE ANALYTICS & PREDICTION PLATFORM</h3>
+                                <div class="fw-semibold text-dark">Central Multispecialty Hospital & Medical Research Center</div>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2 ms-1"><i class="bi bi-geo-alt-fill me-1 text-teal" style="color: #0f766e;"></i>123 Healthcare Boulevard, Medical District • Contact: +1 (800) 555-HAPP • 24/7 Emergency Service</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="badge bg-light text-dark border px-3 py-2 rounded-3 fs-6 font-heading mb-1">
+                            Rx No: <strong class="text-primary">{{ prescription.prescription_number }}</strong>
+                        </div>
+                        <small class="text-muted d-block">Issued: <strong>{{ prescription.created_at|date:"F d, Y" }}</strong></small>
+                    </div>
+                </div>
+
+                <!-- Info Grid: Doctor & Patient Demographics -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="bg-light rounded-4 p-4 border h-100">
+                            <div class="d-flex align-items-center gap-2 text-primary fw-bold mb-2">
+                                <i class="bi bi-person-badge-fill fs-5"></i>
+                                <span class="text-uppercase small font-heading">Attending Physician</span>
+                            </div>
+                            <div class="fw-bold text-dark fs-5 mb-1">Dr. {{ prescription.doctor.user.get_full_name|default:prescription.doctor.user.username }}</div>
+                            <div class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1 mb-2 font-heading fw-semibold">
+                                {{ prescription.doctor.specialization.name|default:"General Medicine" }}
+                            </div>
+                            <div class="text-secondary small mb-1">Medical License: <strong>{{ prescription.doctor.license_number }}</strong></div>
+                            <div class="text-secondary small">Facility: {{ prescription.doctor.hospital_name }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="bg-light rounded-4 p-4 border h-100">
+                            <div class="d-flex align-items-center gap-2 text-teal fw-bold mb-2" style="color: #0f766e;">
+                                <i class="bi bi-person-circle fs-5"></i>
+                                <span class="text-uppercase small font-heading">Patient Demographics</span>
+                            </div>
+                            <div class="fw-bold text-dark fs-5 mb-1">{{ prescription.patient.get_full_name|default:prescription.patient.username }}</div>
+                            <div class="text-muted small mb-2">Patient Record ID: <strong>#{{ prescription.patient.id }}</strong></div>
+                            <div class="text-secondary small mb-1">Age / Gender: <strong>{{ patient_profile.age|default:"N/A" }} Yrs / {{ patient_profile.gender|default:"N/A" }}</strong></div>
+                            <div class="text-secondary small">Contact Phone: <strong>{{ prescription.patient.phone|default:"N/A" }}</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnosis & Symptoms Block -->
+                <div class="card bg-light border-0 rounded-4 p-4 mb-4">
+                    <h6 class="fw-bold text-primary mb-3 font-heading"><i class="bi bi-clipboard2-pulse-fill me-2"></i>Clinical Impressions & Diagnosis</h6>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <small class="text-muted d-block font-heading fw-semibold">PRIMARY DIAGNOSIS</small>
+                            <span class="fs-6 fw-bold text-dark">{{ prescription.diagnosis }}</span>
+                        </div>
+                        {% if prescription.symptoms %}
+                            <div class="col-md-6">
+                                <small class="text-muted d-block font-heading fw-semibold">PRESENTING SYMPTOMS</small>
+                                <span class="text-secondary">{{ prescription.symptoms }}</span>
+                            </div>
+                        {% endif %}
+                        {% if prescription.clinical_notes %}
+                            <div class="col-md-12 border-top pt-2 mt-2">
+                                <small class="text-muted d-block font-heading fw-semibold">DIETARY ADVICE & CLINICAL OBSERVATIONS</small>
+                                <span class="text-secondary">{{ prescription.clinical_notes|linebreaksbr }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Medications Table -->
+                <h5 class="fw-bold text-dark mb-3 font-heading"><i class="bi bi-capsule-fill text-teal me-2" style="color: #0f766e;"></i>Rx - Prescribed Medication Orders</h5>
+                <div class="table-responsive mb-4 rounded-3 border">
+                    <table class="table align-middle table-hover mb-0">
+                        <thead style="background-color: #0f766e;" class="text-white">
+                            <tr>
+                                <th class="py-3 ps-3">Medicine & Type</th>
+                                <th class="py-3">Strength</th>
+                                <th class="py-3">Dosage</th>
+                                <th class="py-3">Timing (M-A-N)</th>
+                                <th class="py-3">Duration</th>
+                                <th class="py-3">Meal Instruction</th>
+                                <th class="py-3 pe-3 text-end">Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in medicines %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <div class="fw-bold text-dark fs-6">{{ m.medicine_name }}</div>
+                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill font-heading small px-2 py-0.5">{{ m.medicine_type }}</span>
+                                    </td>
+                                    <td><span class="badge bg-light text-dark border px-2.5 py-1.5 rounded-3 fw-semibold">{{ m.strength }}</span></td>
+                                    <td><span class="fw-bold text-dark">{{ m.dosage }}</span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                            <span class="badge {% if m.morning %}bg-warning-subtle text-warning-emphasis{% else %}bg-light text-muted{% endif %} px-2 py-1" title="Morning">☀️ Morning</span>
+                                            <span class="badge {% if m.afternoon %}bg-info-subtle text-info-emphasis{% else %}bg-light text-muted{% endif %} px-2 py-1" title="Afternoon">🌤️ Afternoon</span>
+                                            <span class="badge {% if m.night %}bg-indigo-subtle text-primary-emphasis{% else %}bg-light text-muted{% endif %} px-2 py-1" title="Night">🌙 Night</span>
+                                        </div>
+                                        <small class="text-muted d-block">{{ m.frequency }}</small>
+                                    </td>
+                                    <td><span class="fw-medium text-dark">{{ m.duration }}</span></td>
+                                    <td><span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-1.5 rounded-pill font-heading">{{ m.meal_instruction }}</span></td>
+                                    <td class="pe-3 text-end"><span class="fw-bold fs-6 text-dark">{{ m.quantity }}</span></td>
+                                </tr>
+                                {% if m.notes %}
+                                    <tr>
+                                        <td colspan="7" class="bg-light text-muted small ps-4 py-2">
+                                            <i class="bi bi-info-circle-fill me-1 text-primary"></i><strong>Special Note:</strong> {{ m.notes }}
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">No medications added.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Follow-Up & Authorization Footer -->
+                <div class="row align-items-end pt-3 border-top mt-2">
+                    <div class="col-md-7">
+                        {% if prescription.follow_up_date %}
+                            <div class="alert alert-success border-0 rounded-4 mb-0 p-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="bi bi-calendar-check-fill fs-3 text-success"></i>
+                                    <div>
+                                        <small class="text-success-emphasis d-block font-heading fw-bold">RECOMMENDED FOLLOW-UP VISIT</small>
+                                        <span class="fw-bold text-dark fs-6">{{ prescription.follow_up_date|date:"F d, Y" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-5 text-end">
+                        <div class="d-flex flex-column align-items-end">
+                            <div class="text-success fw-bold small mb-1"><i class="bi bi-patch-check-fill me-1"></i>Digitally Authorized e-Prescription</div>
+                            <div class="fw-bold text-dark fs-6">Dr. {{ prescription.doctor.user.get_full_name|default:prescription.doctor.user.username }}</div>
+                            <small class="text-muted">Lic No: {{ prescription.doctor.license_number }}</small>
+                            <small class="text-muted">HAPP Platform Verified • Hospital Seal</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

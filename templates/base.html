@@ -366,16 +366,34 @@
                         <a class="nav-link {% if request.resolver_match.url_name == 'broadcast_announcement' %}active{% endif %}" href="{% url 'broadcast_announcement' %}">
                             <i class="bi bi-megaphone-fill"></i> Broadcast Alerts
                         </a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'admin_medical_reports' %}active{% endif %}" href="{% url 'admin_medical_reports' %}">
+                            <i class="bi bi-file-earmark-pdf-fill"></i> Medical Reports
+                        </a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'admin_prescriptions_analytics' %}active{% endif %}" href="{% url 'admin_prescriptions_analytics' %}">
+                            <i class="bi bi-file-earmark-medical-fill"></i> Prescriptions Audit
+                        </a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'admin_security_dashboard' %}active{% endif %}" href="{% url 'admin_security_dashboard' %}">
+                            <i class="bi bi-shield-lock-fill"></i> 2FA Security Audit
+                        </a>
+                        <a class="nav-link {% if 'backup' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_backup_dashboard' %}">
+                            <i class="bi bi-cloud-arrow-up-fill"></i> Backup & Recovery
+                        </a>
 
                     {% elif user.is_doctor %}
                         <a class="nav-link {% if request.resolver_match.url_name == 'doctor_dashboard' %}active{% endif %}" href="{% url 'doctor_dashboard' %}">
                             <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'doctor_prescription_list' %}active{% endif %}" href="{% url 'doctor_prescription_list' %}">
+                            <i class="bi bi-file-earmark-medical-fill"></i> e-Prescriptions
                         </a>
                         <a class="nav-link {% if request.resolver_match.url_name == 'create_risk_assessment' %}active{% endif %}" href="{% url 'create_risk_assessment' %}">
                             <i class="bi bi-clipboard-pulse"></i> Risk Assessment
                         </a>
                         <a class="nav-link {% if request.resolver_match.url_name == 'doctor_patient_list' %}active{% endif %}" href="{% url 'doctor_patient_list' %}">
                             <i class="bi bi-person-lines-fill"></i> Patient Records
+                        </a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'doctor_medical_reports' %}active{% endif %}" href="{% url 'doctor_medical_reports' %}">
+                            <i class="bi bi-file-earmark-medical"></i> Medical Reports
                         </a>
                         <a class="nav-link {% if request.resolver_match.url_name == 'manage_schedule' %}active{% endif %}" href="{% url 'manage_schedule' %}">
                             <i class="bi bi-clock-history"></i> My Schedule
@@ -397,14 +415,14 @@
                         <a class="nav-link {% if request.resolver_match.url_name == 'patient_appointments_list' %}active{% endif %}" href="{% url 'patient_appointments_list' %}">
                             <i class="bi bi-calendar-check-fill"></i> My Appointments
                         </a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'patient_prescriptions_list' %}active{% endif %}" href="{% url 'patient_prescriptions_list' %}">
+                            <i class="bi bi-file-earmark-medical-fill"></i> My Prescriptions
+                        </a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'patient_medical_reports' %}active{% endif %}" href="{% url 'patient_medical_reports' %}">
+                            <i class="bi bi-file-earmark-text-fill"></i> Medical Reports
+                        </a>
                         <a class="nav-link {% if request.resolver_match.url_name == 'patient_risk_history' %}active{% endif %}" href="{% url 'patient_risk_history' %}">
                             <i class="bi bi-activity"></i> Risk History
-                        </a>
-                        <a class="nav-link {% if request.resolver_match.url_name == 'patient_prescriptions' %}active{% endif %}" href="{% url 'patient_prescriptions' %}">
-                            <i class="bi bi-file-earmark-medical-fill"></i> Prescriptions
-                        </a>
-                        <a class="nav-link {% if request.resolver_match.url_name == 'medical_records_vault' %}active{% endif %}" href="{% url 'medical_records_vault' %}">
-                            <i class="bi bi-folder-fill"></i> Records Vault
                         </a>
                         <a class="nav-link {% if request.resolver_match.url_name == 'edit_patient_profile' %}active{% endif %}" href="{% url 'edit_patient_profile' %}">
                             <i class="bi bi-person-fill-gear"></i> Health Profile

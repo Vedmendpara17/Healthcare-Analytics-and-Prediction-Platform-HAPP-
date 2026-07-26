@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Appointment Rescheduled Notice</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <div style="background-color: #0284c7; padding: 20px; text-align: center; color: #ffffff;">
+            <h2 style="margin: 0;">Patient Appointment Rescheduled</h2>
+        </div>
+        <div style="padding: 30px; color: #333333; line-height: 1.6;">
+            <p>Dear <strong>Dr. {{ doctor_name }}</strong>,</p>
+            <p>Patient <strong>{{ patient_name }}</strong> has rescheduled their appointment with you.</p>
+            
+            <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <p style="margin: 0 0 8px 0;"><strong>Appointment ID:</strong> #{{ appointment_id }}</p>
+                <p style="margin: 0 0 8px 0;"><strong>Patient Name:</strong> {{ patient_name }}</p>
+                <p style="margin: 0 0 8px 0;"><strong>Previous Schedule:</strong> {{ previous_date_time|default:"N/A" }}</p>
+                <p style="margin: 0 0 8px 0; color: #0284c7;"><strong>New Scheduled Date:</strong> {{ date }}</p>
+                <p style="margin: 0 0 8px 0; color: #0284c7;"><strong>New Time Slot:</strong> {{ time_slot }}</p>
+                {% if reschedule_reason %}
+                    <p style="margin: 0;"><strong>Reason for Rescheduling:</strong> {{ reschedule_reason }}</p>
+                {% endif %}
+            </div>
+
+            <p>Your doctor dashboard appointment calendar has been updated automatically with this new schedule.</p>
+            <p style="margin-top: 25px; font-size: 12px; color: #64748b; text-align: center;">Healthcare Analytics & Prediction Platform (HAPP) • Automated Notification System</p>
+        </div>
+    </div>
+</body>
+</html>

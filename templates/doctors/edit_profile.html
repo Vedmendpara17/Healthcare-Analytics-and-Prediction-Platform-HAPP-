@@ -1,50 +1,143 @@
 {% extends 'base.html' %}
 
-{% block title %}Edit Doctor Profile | Doctor Panel{% endblock %}
+{% block title %}Doctor Profile & Photo | Doctor Panel{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="card-custom p-4 p-md-5">
-                <h3 class="fw-bold mb-4"><i class="bi bi-person-gear text-brand-primary me-2"></i>Update Doctor Profile</h3>
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+                <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                        <i class="bi bi-person-badge-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h3 class="fw-bold mb-0 text-dark">Doctor Profile & Photograph</h3>
+                        <small class="text-muted">Manage your public clinical profile, professional biography, and profile picture.</small>
+                    </div>
+                </div>
 
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" id="profileForm">
                     {% csrf_token %}
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Qualification *</label>
-                            <input type="text" name="qualification" value="{{ doctor.qualification }}" class="form-control rounded-3" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Years of Experience *</label>
-                            <input type="number" name="experience_years" value="{{ doctor.experience_years }}" class="form-control rounded-3" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Hospital / Clinic Name *</label>
-                            <input type="text" name="hospital_name" value="{{ doctor.hospital_name }}" class="form-control rounded-3" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Consultation Fee ($) *</label>
-                            <input type="number" step="0.01" name="consultation_fee" value="{{ doctor.consultation_fee }}" class="form-control rounded-3" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Professional Biography / Summary</label>
-                            <textarea name="bio" class="form-control rounded-3" rows="3">{{ doctor.bio|default:"" }}</textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Profile Photograph</label>
-                            <input type="file" name="profile_photo" class="form-control rounded-3">
+
+                    <!-- Profile Photo Display & Upload Section -->
+                    <div class="card bg-light border-0 rounded-4 p-4 mb-4 text-center">
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="position-relative mb-3">
+                                {% if doctor.profile_photo %}
+                                    <img id="photoPreview" src="{{ doctor.profile_photo.url }}" alt="Dr. {{ doctor.user.get_full_name }}" class="rounded-circle border border-3 border-white shadow-sm" style="width: 140px; height: 140px; object-fit: cover;">
+                                {% else %}
+                                    <div id="photoPlaceholder" class="rounded-circle bg-primary-subtle text-primary border border-3 border-white shadow-sm d-flex align-items-center justify-content-center" style="width: 140px; height: 140px;">
+                                        <i class="bi bi-person-fill" style="font-size: 64px;"></i>
+                                    </div>
+                                    <img id="photoPreview" src="" alt="Profile Preview" class="rounded-circle border border-3 border-white shadow-sm d-none" style="width: 140px; height: 140px; object-fit: cover;">
+                                {% endif %}
+                            </div>
+
+                            <h5 class="fw-bold mb-1 text-dark">Dr. {{ doctor.user.get_full_name|default:doctor.user.username }}</h5>
+                            <span class="badge bg-primary-subtle text-primary px-3 py-1.5 rounded-pill mb-3 font-heading fw-semibold">
+                                {{ doctor.specialization.name|default:"General Medicine" }}
+                            </span>
+
+                            <div class="d-flex flex-column align-items-center gap-2">
+                                <button type="button" id="triggerPhotoBtn" class="btn btn-outline-primary rounded-3 px-4 py-2 fw-semibold">
+                                    <i class="bi bi-camera-fill me-1.5"></i>
+                                    {% if doctor.profile_photo %}Change Photo{% else %}Upload Profile Photo{% endif %}
+                                </button>
+
+                                <input type="file" name="profile_photo" id="profilePhotoInput" class="d-none" accept="image/jpeg,image/png,image/jpg">
+
+                                <div id="fileSelectedBadge" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-3 d-none">
+                                    <i class="bi bi-file-earmark-image me-1"></i> <span id="fileNameDisplay">Selected</span>
+                                </div>
+
+                                <small class="text-muted">Allowed formats: <strong>.jpg, .jpeg, .png</strong> (Max 5MB)</small>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 mt-4">
-                        <a href="{% url 'doctor_dashboard' %}" class="btn btn-outline-secondary rounded-3">Cancel</a>
-                        <button type="submit" class="btn btn-brand-primary rounded-3 px-4">Update Profile</button>
+                    <!-- Profile Information Form -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Medical Qualification <span class="text-danger">*</span></label>
+                            <input type="text" name="qualification" value="{{ doctor.qualification }}" class="form-control rounded-3" placeholder="e.g. MBBS, MD (Cardiology)" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Years of Experience <span class="text-danger">*</span></label>
+                            <input type="number" name="experience_years" value="{{ doctor.experience_years }}" min="0" max="70" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Hospital / Clinic Name <span class="text-danger">*</span></label>
+                            <input type="text" name="hospital_name" value="{{ doctor.hospital_name }}" class="form-control rounded-3" placeholder="Hospital or Clinic Name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Consultation Fee ($) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" name="consultation_fee" value="{{ doctor.consultation_fee }}" min="0" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Professional Biography / Clinical Summary</label>
+                            <textarea name="bio" class="form-control rounded-3" rows="4" placeholder="Brief professional summary, specializations, and patient care philosophy...">{{ doctor.bio|default:"" }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                        <a href="{% url 'doctor_dashboard' %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fw-bold">
+                            <i class="bi bi-check-circle me-1.5"></i>Save & Update Profile
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const triggerPhotoBtn = document.getElementById('triggerPhotoBtn');
+    const photoInput = document.getElementById('profilePhotoInput');
+    const photoPreview = document.getElementById('photoPreview');
+    const photoPlaceholder = document.getElementById('photoPlaceholder');
+    const fileSelectedBadge = document.getElementById('fileSelectedBadge');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+    triggerPhotoBtn.addEventListener('click', function() {
+        photoInput.click();
+    });
+
+    photoInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+
+            // Client side file validation
+            const validExtensions = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!validExtensions.includes(file.type)) {
+                alert("Only .jpg, .jpeg, and .png image files are allowed.");
+                this.value = '';
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Image file size must not exceed 5MB.");
+                this.value = '';
+                return;
+            }
+
+            // Render instant live preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                photoPreview.src = e.target.result;
+                photoPreview.classList.remove('d-none');
+                if (photoPlaceholder) {
+                    photoPlaceholder.classList.add('d-none');
+                }
+            };
+            reader.readAsDataURL(file);
+
+            fileNameDisplay.textContent = file.name;
+            fileSelectedBadge.classList.remove('d-none');
+        }
+    });
+});
+</script>
 {% endblock %}

@@ -1,76 +1,269 @@
 {% extends 'base.html' %}
 
-{% block title %}Healthcare Analytics & Prediction System | Home{% endblock %}
+{% block title %}Healthcare Analytics & Prediction Platform (HAPP) | Intelligent Clinical Solutions{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <!-- Hero Banner -->
-    <div class="card-custom bg-brand-primary text-white p-5 mb-5 position-relative overflow-hidden">
+    <div class="card border-0 rounded-4 shadow-lg text-white p-4 p-md-5 mb-5 position-relative overflow-hidden" style="background: linear-gradient(135deg, #0f766e 0%, #0284c7 100%);">
         <div class="row align-items-center position-relative" style="z-index: 2;">
             <div class="col-lg-7">
-                <span class="badge bg-white text-dark mb-3 px-3 py-2 fw-semibold rounded-pill">Clinical Decision Support System</span>
-                <h1 class="display-4 fw-bold text-white mb-3">AI-Assisted Healthcare Analytics & Predictive Risk Assessment</h1>
-                <p class="lead opacity-90 mb-4">Empowering physicians and patients with structured health data evaluation, early disease risk categorization, and seamless appointment management.</p>
+                <span class="badge bg-white text-teal mb-3 px-3 py-2 fw-bold rounded-pill font-heading" style="color: #0f766e;">
+                    <i class="bi bi-shield-check me-1.5"></i>2FA-Secured Clinical Decision Support System
+                </span>
+                <h1 class="display-4 fw-bold text-white mb-3 font-heading">AI-Assisted Healthcare Analytics & Predictive Risk Assessment</h1>
+                <p class="lead opacity-90 mb-4">Empowering physicians and patients with structured health data evaluation, early disease risk categorization, electronic prescriptions, and 2FA-secured medical records.</p>
                 <div class="d-flex gap-3 flex-wrap">
-                    <a href="{% url 'register_patient' %}" class="btn btn-light btn-lg fw-semibold text-brand-primary rounded-3 px-4 shadow">Patient Portal Signup</a>
-                    <a href="{% url 'register_doctor' %}" class="btn btn-outline-light btn-lg fw-semibold rounded-3 px-4">Doctor Registration</a>
+                    {% if not user.is_authenticated %}
+                        <a href="{% url 'register_patient' %}" class="btn btn-light btn-lg fw-bold rounded-3 px-4 shadow text-teal" style="color: #0f766e;">
+                            <i class="bi bi-person-plus-fill me-2"></i>Patient Signup
+                        </a>
+                        <a href="{% url 'register_doctor' %}" class="btn btn-outline-light btn-lg fw-bold rounded-3 px-4">
+                            <i class="bi bi-person-badge-fill me-2"></i>Doctor Registration
+                        </a>
+                    {% else %}
+                        <a href="{% url 'dashboard_redirect' %}" class="btn btn-light btn-lg fw-bold rounded-3 px-4 shadow text-teal" style="color: #0f766e;">
+                            <i class="bi bi-speedometer2 me-2"></i>Go to Dashboard
+                        </a>
+                    {% endif %}
                 </div>
             </div>
             <div class="col-lg-5 text-center d-none d-lg-block">
-                <i class="bi bi-heart-pulse text-white opacity-25" style="font-size: 15rem;"></i>
+                <div class="position-relative d-inline-block">
+                    <i class="bi bi-heart-pulse-fill text-white opacity-25" style="font-size: 14rem;"></i>
+                    <div class="position-absolute top-50 start-50 translate-middle text-white text-center">
+                        <i class="bi bi-activity fs-1 d-block mb-2"></i>
+                        <span class="fw-bold fs-5">HAPP Engine</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Feature Highlights -->
+    <!-- Quick Metric Cards -->
     <div class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="stat-card h-100">
-                <div class="stat-icon bg-primary-subtle text-primary mb-3">
-                    <i class="bi bi-cpu-fill"></i>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 border-start border-4 border-teal" style="border-start-color: #0f766e !important;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-teal-subtle text-teal rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; background-color: #e6fffa; color: #0f766e;">
+                        <i class="bi bi-cpu-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">Predictive Analytics</h6>
+                        <small class="text-muted">ML Disease Risk Scoring</small>
+                    </div>
                 </div>
-                <h5 class="fw-bold">Predictive Risk Engine</h5>
-                <p class="text-muted small">Multi-condition scoring model evaluating cardiovascular, diabetes, and hypertension indicators into Low, Medium, and High risk tiers.</p>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="stat-card h-100">
-                <div class="stat-icon bg-success-subtle text-success mb-3">
-                    <i class="bi bi-calendar2-check-fill"></i>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 border-start border-4 border-primary">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                        <i class="bi bi-file-earmark-medical-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">e-Prescriptions</h6>
+                        <small class="text-muted">QR-Verified PDF Output</small>
+                    </div>
                 </div>
-                <h5 class="fw-bold">Smart Appointments</h5>
-                <p class="text-muted small">Conflict-free booking calendar for doctors and patients with slot management and instant status notifications.</p>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="stat-card h-100">
-                <div class="stat-icon bg-warning-subtle text-warning mb-3">
-                    <i class="bi bi-file-earmark-pdf-fill"></i>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 border-start border-4 border-success">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                        <i class="bi bi-shield-lock-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">2FA Security</h6>
+                        <small class="text-muted">Email OTP Protection</small>
+                    </div>
                 </div>
-                <h5 class="fw-bold">Health Vault & PDF Reports</h5>
-                <p class="text-muted small">Store lab reports securely and download complete clinical health summaries with prescriptions in PDF format.</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 border-start border-4 border-info">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                        <i class="bi bi-calendar-check-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">Smart Booking</h6>
+                        <small class="text-muted">Slot Availability Checker</small>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Featured Specializations -->
+    <!-- Interactive Accordion Section: Features, Problems & Solutions -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white mb-5">
+        <div class="text-center mb-4">
+            <span class="badge bg-teal-subtle text-teal px-3 py-2 rounded-pill font-heading fw-bold mb-2" style="background-color: #e6fffa; color: #0f766e;">
+                <i class="bi bi-info-circle-fill me-1.5"></i>Platform Architecture Overview
+            </span>
+            <h2 class="fw-bold text-dark font-heading">Features, Healthcare Challenges & Our Solutions</h2>
+            <p class="text-muted small max-w-xl mx-auto">Explore how the Healthcare Analytics & Prediction Platform (HAPP) solves critical healthcare delivery challenges through intelligent technology.</p>
+        </div>
+
+        <div class="accordion accordion-flush" id="platformAccordions">
+            <!-- Accordion 1: Core Platform Features -->
+            <div class="accordion-item border rounded-3 mb-3 overflow-hidden shadow-sm">
+                <h2 class="accordion-header" id="headingFeatures">
+                    <button class="accordion-button fw-bold fs-5 text-dark bg-light py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFeatures" aria-expanded="true" aria-controls="collapseFeatures">
+                        <i class="bi bi-star-fill text-warning me-3"></i>1. Core Platform Features & Capabilities
+                    </button>
+                </h2>
+                <div id="collapseFeatures" class="accordion-collapse collapse show" aria-labelledby="headingFeatures" data-bs-parent="#platformAccordions">
+                    <div class="accordion-body p-4 bg-white">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="d-flex gap-3">
+                                    <div class="bg-teal-subtle text-teal rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px; background-color: #e6fffa; color: #0f766e;">
+                                        <i class="bi bi-cpu fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-dark">Predictive Health Risk Assessment</h6>
+                                        <p class="text-muted small mb-0">Evaluates vital health metrics (Blood Pressure, Heart Rate, SpO2, BMI, Blood Glucose) to classify patient health into Low, Medium, and High risk categories.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex gap-3">
+                                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                                        <i class="bi bi-file-earmark-medical fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-dark">Digital e-Prescription (e-Rx) System</h6>
+                                        <p class="text-muted small mb-0">Allows doctors to create multi-medicine digital prescriptions with dosage, frequency, and duration presets, printable as hospital-grade PDFs with verification QR codes.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex gap-3">
+                                    <div class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                                        <i class="bi bi-shield-lock fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-dark">2FA Email OTP Authentication</h6>
+                                        <p class="text-muted small mb-0">Production-grade Two-Factor Authentication requiring a 6-digit Email OTP before account login, backed by 4-attempt password lockout and 5-attempt OTP safeguards.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex gap-3">
+                                    <div class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                                        <i class="bi bi-calendar-check fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-dark">Conflict-Free Appointment Scheduling</h6>
+                                        <p class="text-muted small mb-0">Real-time doctor slot availability checker, automated rescheduling workflows, 3-hour email reminders, and interactive cancellation modals.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accordion 2: Healthcare Problems -->
+            <div class="accordion-item border rounded-3 mb-3 overflow-hidden shadow-sm">
+                <h2 class="accordion-header" id="headingProblems">
+                    <button class="accordion-button collapsed fw-bold fs-5 text-dark bg-light py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProblems" aria-expanded="false" aria-controls="collapseProblems">
+                        <i class="bi bi-exclamation-triangle-fill text-danger me-3"></i>2. Critical Healthcare Problems We Identified
+                    </button>
+                </h2>
+                <div id="collapseProblems" class="accordion-collapse collapse" aria-labelledby="headingProblems" data-bs-parent="#platformAccordions">
+                    <div class="accordion-body p-4 bg-white">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="border-start border-3 border-danger ps-3">
+                                    <h6 class="fw-bold text-danger">Fragmented Medical Records & Paper Loss</h6>
+                                    <p class="text-muted small mb-0">Patients often misplace paper prescriptions and lab reports, leading to repeated tests, inconsistent treatments, and missing medical histories.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="border-start border-3 border-danger ps-3">
+                                    <h6 class="fw-bold text-danger">Delayed Identification of High-Risk Conditions</h6>
+                                    <p class="text-muted small mb-0">Without automated risk calculation, subtle progression in blood pressure or blood glucose indicators goes unnoticed until complications arise.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="border-start border-3 border-danger ps-3">
+                                    <h6 class="fw-bold text-danger">Handwritten Prescription Errors & Forgery</h6>
+                                    <p class="text-muted small mb-0">Illegible handwriting causes pharmacy dispensing errors, while paper prescriptions lack digital verification against unauthorized alterations.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="border-start border-3 border-danger ps-3">
+                                    <h6 class="fw-bold text-danger">Data Breach & Unauthorized Access Vulnerabilities</h6>
+                                    <p class="text-muted small mb-0">Traditional single-password portals leave sensitive health records exposed to credential stuffing, brute-force attacks, and session hijacking.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accordion 3: How HAPP Solves These Problems -->
+            <div class="accordion-item border rounded-3 overflow-hidden shadow-sm">
+                <h2 class="accordion-header" id="headingSolutions">
+                    <button class="accordion-button collapsed fw-bold fs-5 text-dark bg-light py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSolutions" aria-expanded="false" aria-controls="collapseSolutions">
+                        <i class="bi bi-check-circle-fill text-success me-3"></i>3. How HAPP Solves These Problems
+                    </button>
+                </h2>
+                <div id="collapseSolutions" class="accordion-collapse collapse" aria-labelledby="headingSolutions" data-bs-parent="#platformAccordions">
+                    <div class="accordion-body p-4 bg-white">
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <div class="bg-light rounded-3 p-3 border h-100">
+                                    <span class="badge bg-success text-white rounded-pill mb-2 font-heading">Solution 1</span>
+                                    <h6 class="fw-bold text-dark">Unified Digital Health Vault</h6>
+                                    <p class="text-muted small mb-0">Centralized database storing prescriptions, lab reports, vitals, and consultation history accessible anytime to authorized patients and attending doctors.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-light rounded-3 p-3 border h-100">
+                                    <span class="badge bg-success text-white rounded-pill mb-2 font-heading">Solution 2</span>
+                                    <h6 class="fw-bold text-dark">Automated Clinical Risk Scoring</h6>
+                                    <p class="text-muted small mb-0">Algorithmic risk evaluation alerts doctors to elevated vital signs instantly, prioritizing high-risk patients for urgent clinical intervention.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-light rounded-3 p-3 border h-100">
+                                    <span class="badge bg-success text-white rounded-pill mb-2 font-heading">Solution 3</span>
+                                    <h6 class="fw-bold text-dark">QR-Verified e-Prescriptions</h6>
+                                    <p class="text-muted small mb-0">Generates clean, legible, computer-authorized e-Prescriptions with embedded verification QR codes to eliminate dispensing errors and forgery.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Featured Medical Departments -->
     <div class="mb-5">
-        <h3 class="fw-bold mb-4">Medical Departments & Specializations</h3>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold m-0 text-dark font-heading">Medical Departments & Specializations</h3>
+            <a href="{% url 'doctor_directory' %}" class="btn btn-outline-primary rounded-3 fw-semibold">View All Doctors &rarr;</a>
+        </div>
         <div class="row g-3">
             {% for spec in specializations %}
                 <div class="col-md-4 col-6">
-                    <div class="card-custom p-3 d-flex align-items-center gap-3">
-                        <div class="stat-icon bg-light text-brand-primary">
-                            <i class="bi {{ spec.icon|default:'bi-hospital' }}"></i>
+                    <div class="card border-0 shadow-sm rounded-4 p-3 d-flex flex-row align-items-center gap-3 bg-white h-100">
+                        <div class="stat-icon bg-teal-subtle text-teal rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px; background-color: #e6fffa; color: #0f766e;">
+                            <i class="bi {{ spec.icon|default:'bi-hospital' }} fs-4"></i>
                         </div>
                         <div>
-                            <h6 class="fw-bold mb-1">{{ spec.name }}</h6>
-                            <small class="text-muted">{{ spec.description|truncatewords:6 }}</small>
+                            <h6 class="fw-bold mb-1 text-dark">{{ spec.name }}</h6>
+                            <small class="text-muted d-block">{{ spec.description|truncatewords:6|default:"Specialized clinical care" }}</small>
                         </div>
                     </div>
                 </div>
             {% empty %}
-                <div class="col-12 text-muted">Specializations will appear here once seeded.</div>
+                <div class="col-12 text-muted">Specializations will appear here once registered.</div>
             {% endfor %}
         </div>
     </div>

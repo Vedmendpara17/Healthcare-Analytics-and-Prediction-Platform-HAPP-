@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify Two-Factor OTP | HAPP Platform{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5 bg-white">
+                <div class="text-center mb-4">
+                    <div class="bg-teal-subtle text-teal rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px; background-color: #e6fffa; color: #0f766e;">
+                        <i class="bi bi-shield-lock-fill fs-2"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark font-heading">Two-Factor Authentication</h3>
+                    <p class="text-muted small">Enter the 6-digit One-Time Password (OTP) sent to your registered email address:</p>
+                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill font-heading fs-6">
+                        <i class="bi bi-envelope-at me-1.5 text-teal" style="color: #0f766e;"></i>{{ masked_email }}
+                    </span>
+                </div>
+
+                <form method="post" action="{% url 'verify_otp' %}" id="otpForm" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-4 text-center">
+                        <label class="form-label fw-semibold text-dark mb-2">6-Digit Verification Code</label>
+                        <input type="text" name="otp" id="otpInput" maxlength="6" pattern="\d{6}" class="form-control form-control-lg text-center fw-bold fs-3 tracking-widest rounded-3 border-2" placeholder="0 0 0 0 0 0" required autofocus autocomplete="off" style="letter-spacing: 0.4em;">
+                        <div class="invalid-feedback">Please enter the full 6-digit numeric OTP.</div>
+                    </div>
+
+                    <!-- Countdown Timer Block -->
+                    <div class="alert alert-light border text-center rounded-3 py-2 mb-4">
+                        <small class="text-muted d-block font-heading">OTP Expiry Remaining Time:</small>
+                        <span id="countdownTimer" class="fw-bold text-teal fs-5" style="color: #0f766e;">05:00</span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-3 fw-bold py-2.5 shadow-sm mb-3">
+                        <i class="bi bi-check-circle me-1.5"></i>Verify & Continue
+                    </button>
+                </form>
+
+                <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
+                    <form method="post" action="{% url 'resend_otp' %}" id="resendForm">
+                        {% csrf_token %}
+                        <button type="submit" id="resendBtn" class="btn btn-link text-decoration-none text-teal p-0 fw-semibold" style="color: #0f766e;">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Resend OTP
+                        </button>
+                    </form>
+                    <a href="{% url 'login' %}" class="btn btn-link text-decoration-none text-secondary p-0 small">
+                        <i class="bi bi-x-circle me-1"></i>Cancel Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    let expirySeconds = parseInt("{{ expiry_seconds|default:300 }}");
+    const timerEl = document.getElementById('countdownTimer');
+    const resendBtn = document.getElementById('resendBtn');
+    const otpInput = document.getElementById('otpInput');
+
+    function updateTimer() {
+        if (expirySeconds <= 0) {
+            timerEl.textContent = "00:00 (Expired)";
+            timerEl.classList.remove('text-teal');
+            timerEl.classList.add('text-danger');
+            return;
+        }
+
+        const mins = Math.floor(expirySeconds / 60);
+        const secs = expirySeconds % 60;
+        timerEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        expirySeconds--;
+    }
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    // Auto-formatting space for OTP input
+    if (otpInput) {
+        otpInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    }
+});
+</script>
+{% endblock %}

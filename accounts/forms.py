@@ -42,7 +42,6 @@ class PatientRegistrationForm(forms.ModelForm):
         required=False,
         help_text="Optional 10-digit mobile number starting with 6, 7, 8, or 9"
     )
-    allergies = forms.CharField(widget=forms.Textarea(attrs={'rows': 2}), required=False, help_text="e.g. Penicillin, Peanuts")
     chronic_conditions = forms.CharField(widget=forms.Textarea(attrs={'rows': 2}), required=False, help_text="e.g. Asthma, Diabetes")
 
     class Meta:
@@ -70,7 +69,12 @@ class PatientRegistrationForm(forms.ModelForm):
     def clean_password(self):
         password = self.cleaned_data.get('password')
         if password:
-            validate_password(password)
+            temp_user = User(
+                username=self.cleaned_data.get('username') or self.data.get('username', ''),
+                email=self.cleaned_data.get('email') or self.data.get('email', ''),
+                phone=self.cleaned_data.get('phone') or self.data.get('phone', '')
+            )
+            validate_password(password, user=temp_user)
         return password
 
     def clean(self):
@@ -135,7 +139,12 @@ class DoctorRegistrationForm(forms.ModelForm):
     def clean_password(self):
         password = self.cleaned_data.get('password')
         if password:
-            validate_password(password)
+            temp_user = User(
+                username=self.cleaned_data.get('username') or self.data.get('username', ''),
+                email=self.cleaned_data.get('email') or self.data.get('email', ''),
+                phone=self.cleaned_data.get('phone') or self.data.get('phone', '')
+            )
+            validate_password(password, user=temp_user)
         return password
 
     def clean(self):

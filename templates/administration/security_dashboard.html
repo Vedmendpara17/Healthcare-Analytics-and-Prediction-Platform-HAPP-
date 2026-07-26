@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block title %}2FA & Security Audit Dashboard | Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0 text-dark">2FA Security & Audit Monitor</h3>
+            <p class="text-muted small m-0">Real-time authentication monitoring, brute-force safeguards, and security event logs</p>
+        </div>
+        <div>
+            <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill font-heading">
+                <i class="bi bi-shield-fill-check me-1.5"></i>2FA Email OTP Active
+            </span>
+        </div>
+    </div>
+
+    <!-- Security Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-shield-lock-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted font-heading fw-semibold">Successful Logins</small>
+                        <h4 class="fw-bold mb-0 text-dark">{{ successful_logins }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-shield-slash-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted font-heading fw-semibold">Failed Password Logins</small>
+                        <h4 class="fw-bold mb-0 text-dark">{{ failed_logins }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-danger-subtle text-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-lock-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted font-heading fw-semibold">Locked Accounts</small>
+                        <h4 class="fw-bold mb-0 text-dark">{{ locked_accounts_count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-key-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted font-heading fw-semibold">OTP Failures</small>
+                        <h4 class="fw-bold mb-0 text-dark">{{ otp_failed_count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+        <form method="get" class="row g-3">
+            <div class="col-md-7">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" value="{{ query }}" class="form-control bg-light border-start-0" placeholder="Search by Username, Details, or IP address...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="action" class="form-select bg-light">
+                    <option value="">All Security Events</option>
+                    <option value="LOGIN_SUCCESS" {% if action_filter == 'LOGIN_SUCCESS' %}selected{% endif %}>LOGIN_SUCCESS</option>
+                    <option value="FAILED_LOGIN" {% if action_filter == 'FAILED_LOGIN' %}selected{% endif %}>FAILED_LOGIN</option>
+                    <option value="OTP_GENERATED" {% if action_filter == 'OTP_GENERATED' %}selected{% endif %}>OTP_GENERATED</option>
+                    <option value="OTP_VERIFIED" {% if action_filter == 'OTP_VERIFIED' %}selected{% endif %}>OTP_VERIFIED</option>
+                    <option value="OTP_FAILED" {% if action_filter == 'OTP_FAILED' %}selected{% endif %}>OTP_FAILED</option>
+                    <option value="OTP_EXPIRED" {% if action_filter == 'OTP_EXPIRED' %}selected{% endif %}>OTP_EXPIRED</option>
+                    <option value="OTP_RESENT" {% if action_filter == 'OTP_RESENT' %}selected{% endif %}>OTP_RESENT</option>
+                    <option value="ACCOUNT_LOCKED" {% if action_filter == 'ACCOUNT_LOCKED' %}selected{% endif %}>ACCOUNT_LOCKED</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100 rounded-3">Filter</button>
+                <a href="{% url 'admin_security_dashboard' %}" class="btn btn-outline-secondary rounded-3" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Security Audit Logs Table -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-shield-check text-primary me-2"></i>Security Audit Events</h5>
+        <div class="table-responsive">
+            <table class="table align-middle table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Event Action</th>
+                        <th>Details</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                        <tr>
+                            <td><small class="text-muted"><i class="bi bi-clock me-1"></i>{{ log.timestamp|date:"Y-m-d H:i:s" }}</small></td>
+                            <td>
+                                {% if log.actor %}
+                                    <span class="fw-bold text-dark">{{ log.actor.get_full_name|default:log.actor.username }}</span>
+                                {% else %}
+                                    <span class="text-muted font-heading">Anonymous / Guest</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.actor %}
+                                    <span class="badge bg-light text-dark border">{{ log.actor.get_role_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-light text-muted border">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if 'SUCCESS' in log.action or 'VERIFIED' in log.action %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill">{{ log.action }}</span>
+                                {% elif 'FAILED' in log.action or 'LOCKED' in log.action %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 rounded-pill">{{ log.action }}</span>
+                                {% elif 'EXPIRED' in log.action or 'RESENT' in log.action %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1 rounded-pill">{{ log.action }}</span>
+                                {% else %}
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1 rounded-pill">{{ log.action }}</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="small text-dark">{{ log.details }}</span></td>
+                            <td><code>{{ log.ip_address|default:"127.0.0.1" }}</code></td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No security events found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+            <div class="d-flex justify-content-center mt-4">
+                <nav>
+                    <ul class="pagination mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&action={{ action_filter }}">Previous</a></li>
+                        {% endif %}
+                        <li class="page-item active"><span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                        {% if page_obj.has_next %}
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&action={{ action_filter }}">Next</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

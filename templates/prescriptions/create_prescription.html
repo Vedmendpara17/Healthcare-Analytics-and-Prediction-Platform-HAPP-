@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+
+{% block title %}Issue Electronic Prescription | Doctor Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-11">
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                            <i class="bi bi-file-earmark-medical-fill fs-3"></i>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold mb-0 text-dark">Issue Digital e-Prescription (Rx)</h3>
+                            <small class="text-muted">Create an official, digitally authorized medical prescription with automated clinical defaults.</small>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="button" id="prefillTemplateBtn" class="btn btn-outline-primary rounded-3 px-3">
+                            <i class="bi bi-magic me-1.5"></i>Pre-Fill Clinical Template
+                        </button>
+                    </div>
+                </div>
+
+                <form method="post" id="prescriptionForm" class="needs-validation" novalidate>
+                    {% csrf_token %}
+
+                    <!-- 1. Patient & Appointment Selection -->
+                    <h5 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-person-bounding-box me-2"></i>1. Patient & Consultation Selection</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Select Completed Patient Appointment <span class="text-danger">*</span></label>
+                            <select name="appointment_id" id="appointmentSelect" class="form-select form-select-lg rounded-3" required>
+                                <option value="">-- Choose Patient Appointment --</option>
+                                {% for app in completed_appointments %}
+                                    <option value="{{ app.id }}" {% if selected_appointment and selected_appointment.id == app.id %}selected{% endif %}>
+                                        Patient: {{ app.patient.get_full_name|default:app.patient.username }} (Appt #{{ app.id }} • {{ app.date|date:"M d, Y" }} at {{ app.get_time_slot_display_text }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">Please select an appointment.</div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Clinical Diagnosis & Symptoms -->
+                    <h5 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-clipboard-pulse me-2"></i>2. Diagnosis & Clinical Notes</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Primary Diagnosis <span class="text-danger">*</span></label>
+                            {{ form.diagnosis }}
+                            <small class="text-muted">Maximum 500 characters</small>
+                            <div class="invalid-feedback">Diagnosis is required (max 500 chars).</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Presenting Symptoms (Auto-Fetched)</label>
+                            {{ form.symptoms }}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Clinical Observations & Dietary Advice</label>
+                            {{ form.clinical_notes }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Follow-Up Date</label>
+                            {{ form.follow_up_date }}
+                            <small class="text-muted">Auto-populated to 7 days from today</small>
+                        </div>
+                    </div>
+
+                    <!-- 3. Medication Quick-Fill & Table -->
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h5 class="fw-bold text-primary m-0"><i class="bi bi-capsule me-2"></i>3. Medication Orders (Rx Table)</h5>
+                        <div class="d-flex gap-2">
+                            <select id="quickMedSelect" class="form-select form-select-sm rounded-3 style-select" style="max-width: 260px;">
+                                <option value="">⚡ Quick-Fill Common Medicine...</option>
+                                <option value="paracetamol">Paracetamol 500mg (1-0-1, 5 Days)</option>
+                                <option value="amoxicillin">Amoxicillin 500mg (1-0-1, 7 Days)</option>
+                                <option value="azithromycin">Azithromycin 500mg (1-0-0, 3 Days)</option>
+                                <option value="omeprazole">Omeprazole 20mg (1-0-0, 14 Days)</option>
+                                <option value="cetirizine">Cetirizine 10mg (0-0-1, 5 Days)</option>
+                                <option value="ibuprofen">Ibuprofen 400mg (1-0-1, 3 Days)</option>
+                                <option value="metformin">Metformin 500mg (1-0-1, 30 Days)</option>
+                                <option value="amlodipine">Amlodipine 5mg (1-0-0, 30 Days)</option>
+                            </select>
+                            <button type="button" id="addMedicineBtn" class="btn btn-sm btn-outline-primary rounded-3 fw-semibold">
+                                <i class="bi bi-plus-circle me-1"></i>Add Another Medicine
+                            </button>
+                        </div>
+                    </div>
+
+                    {{ formset.management_form }}
+
+                    <div id="medicinesContainer">
+                        {% for med_form in formset %}
+                            <div class="card bg-light border-0 rounded-3 p-3 mb-3 medicine-row">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold small">Medicine Name *</label>
+                                        {{ med_form.medicine_name }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold small">Form Type</label>
+                                        {{ med_form.medicine_type }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold small">Strength</label>
+                                        {{ med_form.strength }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold small">Dosage *</label>
+                                        {{ med_form.dosage }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold small">Duration *</label>
+                                        {{ med_form.duration }}
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold small">Frequency Label</label>
+                                        {{ med_form.frequency }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold small">Daily Timing Checkboxes</label>
+                                        <div class="d-flex align-items-center gap-3 pt-1">
+                                            <div class="form-check">
+                                                {{ med_form.morning }}
+                                                <label class="form-check-label small" for="{{ med_form.morning.id_for_label }}">Morning ☀️</label>
+                                            </div>
+                                            <div class="form-check">
+                                                {{ med_form.afternoon }}
+                                                <label class="form-check-label small" for="{{ med_form.afternoon.id_for_label }}">Afternoon 🌤️</label>
+                                            </div>
+                                            <div class="form-check">
+                                                {{ med_form.night }}
+                                                <label class="form-check-label small" for="{{ med_form.night.id_for_label }}">Night 🌙</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold small">Meal Timing</label>
+                                        {{ med_form.meal_instruction }}
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-semibold small">Total Quantity</label>
+                                        {{ med_form.quantity }}
+                                    </div>
+                                    <div class="col-md-7">
+                                        <label class="form-label fw-semibold small">Special Medicine Notes</label>
+                                        {{ med_form.notes }}
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        {% if med_form.instance.pk %}
+                                            <div class="form-check text-danger mb-2">
+                                                {{ med_form.DELETE }} Delete
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- 4. Prescription Finalization Status -->
+                    <div class="row g-3 mb-4 border-top pt-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Prescription Status <span class="text-danger">*</span></label>
+                            {{ form.prescription_status }}
+                            <small class="text-muted">Finalized prescriptions are immediately available to the patient.</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a href="{% url 'doctor_prescription_list' %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fw-bold">
+                            <i class="bi bi-check-circle me-1.5"></i>Issue e-Prescription
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const addBtn = document.getElementById('addMedicineBtn');
+    const container = document.getElementById('medicinesContainer');
+    const totalForms = document.getElementById('id_medicines-TOTAL_FORMS');
+    const quickMedSelect = document.getElementById('quickMedSelect');
+    const prefillTemplateBtn = document.getElementById('prefillTemplateBtn');
+
+    // Medicine Presets Catalog
+    const medCatalog = {
+        paracetamol: { name: 'Paracetamol', type: 'Tablet', strength: '500 mg', dosage: '1 Tablet', freq: '1-0-1 (Twice Daily)', morning: true, afternoon: false, night: true, duration: '5 Days', meal: 'After Food', qty: '10', notes: 'Take after meals with water.' },
+        amoxicillin: { name: 'Amoxicillin', type: 'Capsule', strength: '500 mg', dosage: '1 Capsule', freq: '1-0-1 (Twice Daily)', morning: true, afternoon: false, night: true, duration: '7 Days', meal: 'After Food', qty: '14', notes: 'Complete full 7-day antibiotic course.' },
+        azithromycin: { name: 'Azithromycin', type: 'Tablet', strength: '500 mg', dosage: '1 Tablet', freq: '1-0-0 (Once Daily)', morning: true, afternoon: false, night: false, duration: '3 Days', meal: 'Before Food', qty: '3', notes: 'Take 1 hour before meal.' },
+        omeprazole: { name: 'Omeprazole', type: 'Capsule', strength: '20 mg', dosage: '1 Capsule', freq: '1-0-0 (Once Daily)', morning: true, afternoon: false, night: false, duration: '14 Days', meal: 'Before Food', qty: '14', notes: 'Take early morning on an empty stomach.' },
+        cetirizine: { name: 'Cetirizine', type: 'Tablet', strength: '10 mg', dosage: '1 Tablet', freq: '0-0-1 (Nightly)', morning: false, afternoon: false, night: true, duration: '5 Days', meal: 'After Food', qty: '5', notes: 'May cause mild drowsiness.' },
+        ibuprofen: { name: 'Ibuprofen', type: 'Tablet', strength: '400 mg', dosage: '1 Tablet', freq: '1-0-1 (Twice Daily)', morning: true, afternoon: false, night: true, duration: '3 Days', meal: 'After Food', qty: '6', notes: 'Take with food to prevent gastric upset.' },
+        metformin: { name: 'Metformin', type: 'Tablet', strength: '500 mg', dosage: '1 Tablet', freq: '1-0-1 (Twice Daily)', morning: true, afternoon: false, night: true, duration: '30 Days', meal: 'With Food', qty: '60', notes: 'Take with meals.' },
+        amlodipine: { name: 'Amlodipine', type: 'Tablet', strength: '5 mg', dosage: '1 Tablet', freq: '1-0-0 (Morning)', morning: true, afternoon: false, night: false, duration: '30 Days', meal: 'After Food', qty: '30', notes: 'Monitor blood pressure weekly.' }
+    };
+
+    function fillRowWithPreset(row, data) {
+        row.querySelector('.med-name-input').value = data.name;
+        row.querySelector('.med-type-select').value = data.type;
+        row.querySelector('.med-strength-input').value = data.strength;
+        row.querySelector('.med-dosage-input').value = data.dosage;
+        row.querySelector('.med-freq-input').value = data.freq;
+        row.querySelector('.med-duration-input').value = data.duration;
+        row.querySelector('.med-meal-select').value = data.meal;
+        row.querySelector('.med-qty-input').value = data.qty;
+        row.querySelector('.med-notes-input').value = data.notes;
+
+        const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+        if (checkboxes.length >= 3) {
+            checkboxes[0].checked = data.morning;
+            checkboxes[1].checked = data.afternoon;
+            checkboxes[2].checked = data.night;
+        }
+    }
+
+    quickMedSelect.addEventListener('change', function() {
+        const val = this.value;
+        if (!val || !medCatalog[val]) return;
+
+        const data = medCatalog[val];
+        const rows = container.querySelectorAll('.medicine-row');
+        let targetRow = null;
+
+        // Find first empty row or clone new row
+        for (let row of rows) {
+            const nameInput = row.querySelector('.med-name-input');
+            if (!nameInput.value.trim()) {
+                targetRow = row;
+                break;
+            }
+        }
+
+        if (!targetRow) {
+            // Trigger add new row
+            addBtn.click();
+            const updatedRows = container.querySelectorAll('.medicine-row');
+            targetRow = updatedRows[updatedRows.length - 1];
+        }
+
+        fillRowWithPreset(targetRow, data);
+        this.value = '';
+    });
+
+    // Add row button
+    addBtn.addEventListener('click', function() {
+        const formCount = parseInt(totalForms.value);
+        const firstRow = container.querySelector('.medicine-row');
+        if (!firstRow) return;
+
+        const newRow = firstRow.cloneNode(true);
+        newRow.innerHTML = newRow.innerHTML.replace(/medicines-\d+-/g, `medicines-${formCount}-`);
+        
+        // Reset inputs to empty for new row
+        newRow.querySelector('.med-name-input').value = '';
+        newRow.querySelector('.med-strength-input').value = '';
+        newRow.querySelector('.med-dosage-input').value = '';
+        newRow.querySelector('.med-freq-input').value = '';
+        newRow.querySelector('.med-duration-input').value = '';
+        newRow.querySelector('.med-qty-input').value = '';
+        newRow.querySelector('.med-notes-input').value = '';
+        
+        const chks = newRow.querySelectorAll('input[type="checkbox"]');
+        chks.forEach(chk => { chk.checked = false; });
+
+        container.appendChild(newRow);
+        totalForms.value = formCount + 1;
+    });
+
+    // Pre-fill template button
+    prefillTemplateBtn.addEventListener('click', function() {
+        const diagInput = document.getElementById('id_diagnosis');
+        const notesInput = document.getElementById('id_clinical_notes');
+        
+        if (diagInput && !diagInput.value) {
+            diagInput.value = 'Acute Upper Respiratory Tract Infection (URTI) with mild fever and malaise.';
+        }
+        if (notesInput) {
+            notesInput.value = '1. Maintain adequate hydration by drinking 8-10 glasses of warm water daily.\n2. Rest well and avoid cold beverages.\n3. Follow prescribed medication schedule strictly after meals.';
+        }
+
+        const firstRow = container.querySelector('.medicine-row');
+        if (firstRow) {
+            fillRowWithPreset(firstRow, medCatalog['paracetamol']);
+        }
+    });
+});
+</script>
+{% endblock %}

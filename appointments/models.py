@@ -42,6 +42,7 @@ class Appointment(models.Model):
     reason = models.TextField(help_text="Primary reason or symptom for appointment")
     rejection_reason = models.TextField(blank=True, null=True, help_text="Reason provided if rejected/cancelled/rescheduled")
     reminder_24h_sent = models.BooleanField(default=False)
+    reminder_3h_sent = models.BooleanField(default=False)
     reminder_1h_sent = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -55,6 +56,35 @@ class Appointment(models.Model):
                 name='unique_active_doctor_slot'
             )
         ]
+
+    @property
+    def is_past(self):
+        import datetime
+        if not self.date:
+            return False
+        today = datetime.date.today()
+        if self.date < today:
+            return True
+        elif self.date == today:
+            try:
+                hour, minute = map(int, self.time_slot.split(':'))
+                slot_time = datetime.time(hour, minute)
+                return datetime.datetime.now().time() > slot_time
+            except Exception:
+                return False
+        return False
+
+    @property
+    def is_expired(self):
+        return self.is_past and self.status not in [self.Status.COMPLETED, self.Status.CANCELLED, self.Status.REJECTED]
+
+    @property
+    def display_status(self):
+        if self.status in ['CANCELLED', 'REJECTED', 'COMPLETED']:
+            return self.get_status_display()
+        if self.is_expired:
+            return 'Expired'
+        return self.get_status_display()
 
     def get_time_slot_display_text(self):
         dict_slots = dict(self.TIME_SLOT_CHOICES)
@@ -85,7 +115,9 @@ class EmailLog(models.Model):
         APPROVED = 'APPROVED', 'Appointment Approved'
         REJECTED = 'REJECTED', 'Appointment Rejected'
         RESCHEDULED = 'RESCHEDULED', 'Appointment Rescheduled'
+        RESCHEDULED_DOCTOR = 'RESCHEDULED_DOCTOR', 'Rescheduled Doctor Notice'
         REMINDER = 'REMINDER', 'Appointment Reminder'
+        REMINDER_3H = 'REMINDER_3H', '3-Hour Appointment Reminder'
         CANCELLED_BY_PATIENT = 'CANCELLED_BY_PATIENT', 'Cancelled by Patient'
         CANCELLED_BY_DOCTOR = 'CANCELLED_BY_DOCTOR', 'Cancelled by Doctor'
 

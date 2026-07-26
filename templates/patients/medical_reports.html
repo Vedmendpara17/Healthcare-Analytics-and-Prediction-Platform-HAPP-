@@ -1,0 +1,364 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Medical Reports | Healthcare Analytics System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-file-earmark-text-fill text-brand-primary me-2"></i>Medical Reports</h2>
+            <p class="text-muted small mb-0">Upload, view, and securely share your diagnostic reports and lab results with your attending physicians.</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-brand-primary rounded-3 px-4 py-2 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadReportModal">
+                <i class="bi bi-cloud-arrow-up-fill me-2"></i>Upload New Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-light">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-folder-check fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">Total Reports</div>
+                        <h4 class="fw-bold mb-0 text-dark">{{ total_reports }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-light">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-success text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-check-circle-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">Reviewed by Doctor</div>
+                        <h4 class="fw-bold mb-0 text-success">{{ reviewed_count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-light">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-warning text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-clock-history fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">Pending Review</div>
+                        <h4 class="fw-bold mb-0 text-warning">{{ pending_count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 p-3 bg-white">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-lg-4 col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" value="{{ search_query }}" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Search report name or description...">
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-3">
+                <select name="category" class="form-select rounded-3">
+                    <option value="">All Categories</option>
+                    {% for cat_val, cat_label in categories %}
+                        <option value="{{ cat_val }}" {% if selected_category == cat_val %}selected{% endif %}>{{ cat_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-3">
+                <select name="sort" class="form-select rounded-3">
+                    <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest First</option>
+                    <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary rounded-3 flex-fill fw-semibold"><i class="bi bi-funnel-fill me-1"></i>Filter</button>
+                <a href="{% url 'patient_medical_reports' %}" class="btn btn-outline-secondary rounded-3 px-3 d-flex align-items-center justify-content-center" title="Reset Filters"><i class="bi bi-x-lg"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Reports Grid -->
+    {% if reports %}
+        <div class="row g-4">
+            {% for report in reports %}
+                <div class="col-md-6 col-xl-4">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
+                        <div class="card-body p-4 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if report.is_pdf %}
+                                        <div class="bg-danger-subtle text-danger rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                                            <i class="bi bi-file-earmark-pdf-fill fs-4"></i>
+                                        </div>
+                                    {% else %}
+                                        <div class="bg-info-subtle text-info rounded-3 p-2.5 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                                            <i class="bi bi-file-earmark-image-fill fs-4"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-0 text-truncate" style="max-width: 180px;" title="{{ report.report_name }}">{{ report.report_name }}</h5>
+                                        <span class="badge bg-light text-secondary border small">{{ report.report_category }}</span>
+                                    </div>
+                                </div>
+                                {% if report.review_status == 'REVIEWED' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1.5"><i class="bi bi-check-circle me-1"></i>Reviewed</span>
+                                {% else %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2.5 py-1.5"><i class="bi bi-clock me-1"></i>Pending</span>
+                                {% endif %}
+                            </div>
+
+                            {% if report.description %}
+                                <p class="text-muted small mb-3 text-truncate-2" style="min-height: 38px;">{{ report.description }}</p>
+                            {% else %}
+                                <p class="text-muted small mb-3 italic" style="min-height: 38px;">No description provided.</p>
+                            {% endif %}
+
+                            <div class="bg-light rounded-3 p-2.5 mb-3 small text-muted">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span><i class="bi bi-calendar-event me-1"></i>Uploaded:</span>
+                                    <strong class="text-dark">{{ report.uploaded_at|date:"M d, Y" }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span><i class="bi bi-hdd me-1"></i>File Size:</span>
+                                    <strong class="text-dark">{{ report.formatted_size }}</strong>
+                                </div>
+                                {% if report.doctor %}
+                                    <div class="d-flex justify-content-between">
+                                        <span><i class="bi bi-person-badge me-1"></i>Doctor:</span>
+                                        <strong class="text-dark">Dr. {{ report.doctor.user.get_full_name|default:report.doctor.user.username }}</strong>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {% if report.doctor_notes %}
+                                <div class="alert alert-info border-0 rounded-3 p-2.5 small mb-3">
+                                    <strong class="d-block mb-1"><i class="bi bi-chat-left-text me-1"></i>Doctor Notes:</strong>
+                                    <span class="text-dark">{{ report.doctor_notes }}</span>
+                                </div>
+                            {% endif %}
+
+                            <div class="mt-auto d-flex gap-2 border-top pt-3">
+                                <button type="button" class="btn btn-outline-primary btn-sm flex-fill rounded-3 fw-semibold" 
+                                        onclick="openPreviewModal('{% url 'preview_medical_report' report.id %}', '{{ report.report_name|escapejs }}', {{ report.is_pdf|yesno:'true,false' }})">
+                                    <i class="bi bi-eye me-1"></i>Preview
+                                </button>
+                                <a href="{% url 'download_medical_report' report.id %}" class="btn btn-outline-success btn-sm rounded-3 fw-semibold" title="Download File">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger btn-sm rounded-3" title="Delete Report" data-bs-toggle="modal" data-bs-target="#deleteReportModal{{ report.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delete Confirmation Modal -->
+                <div class="modal fade" id="deleteReportModal{{ report.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content rounded-4 border-0 shadow">
+                            <div class="modal-body text-center p-4">
+                                <div class="bg-danger-subtle text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+                                    <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                                </div>
+                                <h5 class="fw-bold mb-2">Delete Medical Report?</h5>
+                                <p class="text-muted small mb-4">Are you sure you want to delete <strong>{{ report.report_name }}</strong>? This action cannot be undone.</p>
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="{% url 'delete_patient_medical_report' report.id %}" class="btn btn-danger rounded-3 px-4 fw-semibold">Delete</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link rounded-start-3" href="?page={{ page_obj.previous_page_number }}&q={{ search_query }}&category={{ selected_category }}&sort={{ selected_sort }}">Previous</a></li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                            <a class="page-link" href="?page={{ num }}&q={{ search_query }}&category={{ selected_category }}&sort={{ selected_sort }}">{{ num }}</a>
+                        </li>
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                        <li class="page-item"><a class="page-link rounded-end-3" href="?page={{ page_obj.next_page_number }}&q={{ search_query }}&category={{ selected_category }}&sort={{ selected_sort }}">Next</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <!-- Empty State -->
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center my-4">
+            <div class="bg-light text-muted rounded-circle d-inline-flex align-items-center justify-content-center mb-3 mx-auto" style="width: 72px; height: 72px;">
+                <i class="bi bi-file-earmark-x fs-1"></i>
+            </div>
+            <h4 class="fw-bold text-dark">No Medical Reports Found</h4>
+            <p class="text-muted small mb-4">Upload your diagnostic tests, lab results, prescriptions, and imaging reports to keep them organized.</p>
+            <div>
+                <button type="button" class="btn btn-brand-primary rounded-3 px-4 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#uploadReportModal">
+                    <i class="bi bi-cloud-arrow-up-fill me-2"></i>Upload Your First Report
+                </button>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Upload Report Modal -->
+<div class="modal fade" id="uploadReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom p-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-cloud-upload me-2 text-brand-primary"></i>Upload Diagnostic Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Report Title <span class="text-danger">*</span></label>
+                        {{ form.report_name }}
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Report Category <span class="text-danger">*</span></label>
+                            {{ form.report_category }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Link to Appointment (Optional)</label>
+                            {{ form.appointment }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description / Notes</label>
+                        {{ form.description }}
+                    </div>
+                    
+                    <!-- Drag and Drop File Upload Area -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Upload Document <span class="text-danger">*</span></label>
+                        <div class="border-2 border-dashed border-primary rounded-4 p-4 text-center bg-light" id="dropZone" style="border-style: dashed !important; cursor: pointer;">
+                            <i class="bi bi-cloud-arrow-up text-brand-primary display-4 mb-2 d-block"></i>
+                            <h6 class="fw-bold mb-1">Drag and drop your report file here, or click to browse</h6>
+                            <p class="text-muted small mb-0">Supported Formats: <strong>PDF, JPG, JPEG, PNG</strong> (Max file size: <strong>10 MB</strong>)</p>
+                            <div class="d-none mt-3" id="fileSelectedInfo">
+                                <span class="badge bg-success-subtle text-success fs-6 border border-success-subtle p-2" id="fileNameDisplay"></span>
+                            </div>
+                        </div>
+                        <div class="d-none">
+                            {{ form.file }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top p-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-brand-primary rounded-3 px-4 fw-semibold" id="submitUploadBtn">
+                        <i class="bi bi-check-circle me-1.5"></i>Upload Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom p-3 d-flex justify-content-between align-items-center">
+                <h5 class="modal-title fw-bold text-dark" id="previewTitle"><i class="bi bi-eye me-2 text-primary"></i>Report Preview</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <a id="openNewTabBtn" href="#" target="_blank" class="btn btn-sm btn-outline-primary rounded-3 fw-semibold"><i class="bi bi-box-arrow-up-right me-1"></i>Open in New Tab</a>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 bg-dark text-center" style="min-height: 520px; display: flex; align-items: center; justify-content: center; position: relative;">
+                <iframe id="previewIframe" style="width: 100%; height: 75vh; border: none; display: none;"></iframe>
+                <img id="previewImg" style="max-width: 100%; max-height: 75vh; object-fit: contain; display: none;" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.querySelector('input[type="file"]');
+    const fileSelectedInfo = document.getElementById('fileSelectedInfo');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+    if (dropZone && fileInput) {
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('bg-primary-subtle');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('bg-primary-subtle');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('bg-primary-subtle');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileName();
+            }
+        });
+
+        fileInput.addEventListener('change', updateFileName);
+
+        function updateFileName() {
+            if (fileInput.files.length) {
+                const name = fileInput.files[0].name;
+                const size = (fileInput.files[0].size / (1024 * 1024)).toFixed(2);
+                fileNameDisplay.textContent = `Selected: ${name} (${size} MB)`;
+                fileSelectedInfo.classList.remove('d-none');
+            }
+        }
+    }
+});
+
+function openPreviewModal(url, title, isPdf) {
+    document.getElementById('previewTitle').innerHTML = `<i class="bi bi-eye me-2 text-primary"></i>${title}`;
+    document.getElementById('openNewTabBtn').href = url;
+
+    const iframe = document.getElementById('previewIframe');
+    const img = document.getElementById('previewImg');
+
+    if (isPdf) {
+        img.style.display = 'none';
+        iframe.style.display = 'block';
+        iframe.src = url;
+    } else {
+        iframe.style.display = 'none';
+        img.style.display = 'inline-block';
+        img.src = url;
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('previewReportModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

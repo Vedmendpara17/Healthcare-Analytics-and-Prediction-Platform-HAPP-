@@ -188,7 +188,6 @@ class Command(BaseCommand):
                     'blood': 'O+',
                     'height': 175.0,
                     'weight': 88.0, # BMI ~ 28.7 (Overweight)
-                    'allergies': 'Penicillin',
                     'chronic': 'Hypertension'
                 },
                 {
@@ -202,7 +201,6 @@ class Command(BaseCommand):
                     'blood': 'A+',
                     'height': 162.0,
                     'weight': 58.0, # BMI ~ 22.1 (Normal)
-                    'allergies': 'None',
                     'chronic': 'None'
                 },
                 {
@@ -216,7 +214,6 @@ class Command(BaseCommand):
                     'blood': 'B+',
                     'height': 170.0,
                     'weight': 95.0, # BMI ~ 32.9 (Obese)
-                    'allergies': 'Dust, Pollen',
                     'chronic': 'Type-2 Diabetes, High Cholesterol'
                 }
             ]
@@ -245,7 +242,6 @@ class Command(BaseCommand):
                         'blood_group': p['blood'],
                         'height_cm': p['height'],
                         'weight_kg': p['weight'],
-                        'allergies': p['allergies'],
                         'chronic_conditions': p['chronic']
                     }
                 )

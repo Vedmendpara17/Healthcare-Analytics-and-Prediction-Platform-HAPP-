@@ -42,10 +42,12 @@
 
                 <!-- Validation Requirements Badge -->
                 <div class="alert alert-light border border-primary-subtle rounded-3 mb-4 p-3.5 small">
-                    <div class="fw-bold mb-1 text-primary"><i class="bi bi-shield-check me-1.5 fs-6"></i> Security & Validation Requirements:</div>
+                    <div class="fw-bold mb-1 text-primary"><i class="bi bi-shield-check me-1.5 fs-6"></i> Security & Password Validation Policy:</div>
                     <ul class="mb-0 ps-3 text-muted">
                         <li><strong>Phone Number:</strong> Must be a valid 10-digit number starting with <strong>6, 7, 8, or 9</strong>.</li>
-                        <li><strong>Strong Password Policy:</strong> Requires uppercase & lowercase letters, numbers, and special characters (e.g. <code>Het@1222</code>, <code>Yug#5445</code>).</li>
+                        <li><strong>Password Length:</strong> Between <strong>8 and 64 characters</strong>.</li>
+                        <li><strong>Character Diversity:</strong> At least 1 uppercase (A-Z), 1 lowercase (a-z), 1 digit (0-9), and 1 special char (`!@#$%^&*()_+-=[]{}|;:'",.<>?/`).</li>
+                        <li><strong>Safety Check:</strong> Passwords must not contain your email, username, phone number, or be a common weak password.</li>
                     </ul>
                 </div>
 
@@ -67,4 +69,105 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const pwdInput = document.querySelector('input[name="password"]');
+    const cpwdInput = document.querySelector('input[name="confirm_password"]');
+
+    if (pwdInput) {
+        const strengthWrapper = document.createElement('div');
+        strengthWrapper.className = 'mt-2 mb-3';
+        strengthWrapper.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-1 small">
+                <span class="text-muted">Password Strength:</span>
+                <span id="strengthText" class="fw-bold text-secondary">None</span>
+            </div>
+            <div class="progress" style="height: 6px;">
+                <div id="strengthBar" class="progress-bar bg-secondary" role="progressbar" style="width: 0%;"></div>
+            </div>
+        `;
+        pwdInput.parentNode.appendChild(strengthWrapper);
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'btn btn-outline-secondary btn-sm position-absolute end-0 top-0 mt-4 me-2 border-0 bg-transparent';
+        toggleBtn.innerHTML = '<i class="bi bi-eye fs-6"></i>';
+        pwdInput.parentNode.style.position = 'relative';
+        pwdInput.parentNode.appendChild(toggleBtn);
+
+        toggleBtn.addEventListener('click', function() {
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                toggleBtn.innerHTML = '<i class="bi bi-eye-slash fs-6"></i>';
+            } else {
+                pwdInput.type = 'password';
+                toggleBtn.innerHTML = '<i class="bi bi-eye fs-6"></i>';
+            }
+        });
+
+        pwdInput.addEventListener('input', function() {
+            const val = pwdInput.value;
+            const bar = document.getElementById('strengthBar');
+            const text = document.getElementById('strengthText');
+
+            if (!val) {
+                bar.style.width = '0%';
+                bar.className = 'progress-bar bg-secondary';
+                text.textContent = 'None';
+                text.className = 'fw-bold text-secondary';
+                return;
+            }
+
+            let score = 0;
+            if (val.length >= 8 && val.length <= 64) score++;
+            if (/[A-Z]/.test(val)) score++;
+            if (/[a-z]/.test(val)) score++;
+            if (/\d/.test(val)) score++;
+            if (/[!@#$%^&*()_+\-=\[\]{};:\'",.<>/?\\|`~]/.test(val)) score++;
+
+            if (score <= 2) {
+                bar.style.width = '25%';
+                bar.className = 'progress-bar bg-danger';
+                text.textContent = 'Weak';
+                text.className = 'fw-bold text-danger';
+            } else if (score === 3) {
+                bar.style.width = '50%';
+                bar.className = 'progress-bar bg-warning';
+                text.textContent = 'Medium';
+                text.className = 'fw-bold text-warning';
+            } else if (score === 4) {
+                bar.style.width = '75%';
+                bar.className = 'progress-bar bg-info';
+                text.textContent = 'Strong';
+                text.className = 'fw-bold text-info';
+            } else if (score === 5) {
+                bar.style.width = '100%';
+                bar.className = 'progress-bar bg-success';
+                text.textContent = 'Very Strong';
+                text.className = 'fw-bold text-success';
+            }
+        });
+    }
+
+    if (cpwdInput) {
+        const toggleBtnConfirm = document.createElement('button');
+        toggleBtnConfirm.type = 'button';
+        toggleBtnConfirm.className = 'btn btn-outline-secondary btn-sm position-absolute end-0 top-0 mt-4 me-2 border-0 bg-transparent';
+        toggleBtnConfirm.innerHTML = '<i class="bi bi-eye fs-6"></i>';
+        cpwdInput.parentNode.style.position = 'relative';
+        cpwdInput.parentNode.appendChild(toggleBtnConfirm);
+
+        toggleBtnConfirm.addEventListener('click', function() {
+            if (cpwdInput.type === 'password') {
+                cpwdInput.type = 'text';
+                toggleBtnConfirm.innerHTML = '<i class="bi bi-eye-slash fs-6"></i>';
+            } else {
+                cpwdInput.type = 'password';
+                toggleBtnConfirm.innerHTML = '<i class="bi bi-eye fs-6"></i>';
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Draft e-Prescription | Doctor Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-11">
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+                <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                    <div class="bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                        <i class="bi bi-pencil-square fs-3"></i>
+                    </div>
+                    <div>
+                        <h3 class="fw-bold mb-0 text-dark">Edit Draft Prescription #{{ prescription.prescription_number }}</h3>
+                        <small class="text-muted">Modify medication orders or clinical observations before finalization.</small>
+                    </div>
+                </div>
+
+                <form method="post" id="editPrescriptionForm">
+                    {% csrf_token %}
+
+                    <h5 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-clipboard-pulse me-2"></i>1. Diagnosis & Clinical Notes</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Primary Diagnosis <span class="text-danger">*</span></label>
+                            {{ form.diagnosis }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Presenting Symptoms</label>
+                            {{ form.symptoms }}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Clinical Observations & Dietary Advice</label>
+                            {{ form.clinical_notes }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Follow-Up Date</label>
+                            {{ form.follow_up_date }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h5 class="fw-bold text-primary m-0"><i class="bi bi-capsule me-2"></i>2. Prescribed Medications</h5>
+                    </div>
+
+                    {{ formset.management_form }}
+                    <div id="medicinesContainer">
+                        {% for med_form in formset %}
+                            <div class="card bg-light border-0 rounded-3 p-3 mb-3 medicine-row">
+                                {{ med_form.id }}
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold small">Medicine Name *</label>
+                                        {{ med_form.medicine_name }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold small">Form Type</label>
+                                        {{ med_form.medicine_type }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold small">Strength</label>
+                                        {{ med_form.strength }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold small">Dosage *</label>
+                                        {{ med_form.dosage }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold small">Duration *</label>
+                                        {{ med_form.duration }}
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold small">Frequency Label</label>
+                                        {{ med_form.frequency }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold small">Daily Timing</label>
+                                        <div class="d-flex align-items-center gap-3 pt-1">
+                                            <div class="form-check">
+                                                {{ med_form.morning }} Morning
+                                            </div>
+                                            <div class="form-check">
+                                                {{ med_form.afternoon }} Afternoon
+                                            </div>
+                                            <div class="form-check">
+                                                {{ med_form.night }} Night
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold small">Meal Timing</label>
+                                        {{ med_form.meal_instruction }}
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-semibold small">Total Quantity</label>
+                                        {{ med_form.quantity }}
+                                    </div>
+                                    <div class="col-md-7">
+                                        <label class="form-label fw-semibold small">Special Notes</label>
+                                        {{ med_form.notes }}
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        {% if med_form.instance.pk %}
+                                            <div class="form-check text-danger mb-2">
+                                                {{ med_form.DELETE }} Remove
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row g-3 mb-4 border-top pt-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Prescription Status <span class="text-danger">*</span></label>
+                            {{ form.prescription_status }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a href="{% url 'prescription_detail' prescription.id %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fw-bold">
+                            <i class="bi bi-check-circle me-1.5"></i>Update & Save Prescription
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

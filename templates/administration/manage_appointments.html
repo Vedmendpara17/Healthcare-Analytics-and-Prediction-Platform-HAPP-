@@ -21,6 +21,7 @@
                     <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
                     <option value="rescheduled" {% if status_filter == 'rescheduled' %}selected{% endif %}>Rescheduled</option>
                     <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Expired / Past</option>
                     <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
                 </select>
             </div>
@@ -46,7 +47,7 @@
                 </thead>
                 <tbody>
                     {% for app in appointments %}
-                        <tr>
+                        <tr class="{% if app.is_expired %}bg-light text-muted{% endif %}">
                             <td class="fw-bold text-muted">#{{ app.id }}</td>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
@@ -64,12 +65,14 @@
                                 <span class="badge bg-light text-dark border px-2 py-1 rounded-pill small">{{ app.doctor.specialization.name|default:"General Medicine" }}</span>
                             </td>
                             <td>
-                                <div class="fw-semibold text-dark">{{ app.date|date:"B d, Y" }}</div>
+                                <div class="fw-semibold text-dark">{{ app.date|date:"F d, Y" }}</div>
                                 <span class="text-muted small"><i class="bi bi-clock me-1"></i>{{ app.get_time_slot_display_text }}</span>
                             </td>
                             <td><span class="small text-secondary" title="{{ app.reason }}">{{ app.reason|truncatechars:40 }}</span></td>
                             <td>
-                                {% if app.status == 'APPROVED' %}
+                                {% if app.is_expired %}
+                                    <span class="app-status-pill status-expired"><i class="bi bi-clock-history me-1"></i>Expired</span>
+                                {% elif app.status == 'APPROVED' %}
                                     <span class="app-status-pill status-approved"><i class="bi bi-check-circle-fill me-1"></i>Approved</span>
                                 {% elif app.status == 'PENDING' %}
                                     <span class="app-status-pill status-pending"><i class="bi bi-hourglass-split me-1"></i>Pending</span>

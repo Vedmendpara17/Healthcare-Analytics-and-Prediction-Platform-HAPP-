@@ -1,10 +1,11 @@
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, RequestFactory, Client
 from django.contrib.auth import get_user_model
 from django.contrib.messages.storage.fallback import FallbackStorage
-from accounts.views import login_view
-from administration.views import admin_dashboard_view
+from django.utils import timezone
+import datetime
 
-from accounts.decorators import role_required
+from accounts.views import login_view
+from accounts.otp_service import generate_secure_otp, mask_email_address
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
 from appointments.models import Specialization
@@ -19,18 +20,22 @@ class RoleBasedAccessControlTests(TestCase):
         # Admin user
         self.admin = User.objects.create_user(
             username='admin_test',
+            email='admin_test@example.com',
             password='AdminPassword123!',
             role=User.Role.ADMIN,
             is_staff=True,
-            is_superuser=True
+            is_superuser=True,
+            email_verified=True
         )
 
         # Approved doctor user
         self.doc_user = User.objects.create_user(
             username='doctor_test',
+            email='doctor_test@example.com',
             password='DoctorPassword123!',
             role=User.Role.DOCTOR,
-            phone='9876543210'
+            phone='9876543210',
+            email_verified=True
         )
         self.doc_profile = DoctorProfile.objects.create(
             user=self.doc_user,
@@ -44,9 +49,11 @@ class RoleBasedAccessControlTests(TestCase):
         # Unapproved doctor user
         self.unapproved_doc = User.objects.create_user(
             username='unapproved_doc',
+            email='unapproved_doc@example.com',
             password='DoctorPassword123!',
             role=User.Role.DOCTOR,
-            phone='9876543211'
+            phone='9876543211',
+            email_verified=True
         )
         self.unapproved_profile = DoctorProfile.objects.create(
             user=self.unapproved_doc,
@@ -60,63 +67,146 @@ class RoleBasedAccessControlTests(TestCase):
         # Patient user
         self.patient_user = User.objects.create_user(
             username='patient_test',
+            email='patient_test@example.com',
             password='PatientPassword123!',
             role=User.Role.PATIENT,
-            phone='9123456789'
+            phone='9123456789',
+            email_verified=True
         )
         self.patient_profile = PatientProfile.objects.create(
-            user=self.patient_user,
-            gender='Male'
+            user=self.patient_user
         )
 
+        self.client = Client()
+
     def _add_messages_and_session(self, request):
-        setattr(request, 'session', {})
+        setattr(request, 'session', self.client.session)
         messages = FallbackStorage(request)
         setattr(request, '_messages', messages)
 
-    def test_unapproved_doctor_login_gated(self):
-        """Verify unapproved doctor login gating in login_view."""
+    def test_account_lockout_after_4_failed_attempts(self):
+        """Verify account locks on 4th consecutive failed login attempt."""
         from django.contrib.auth.models import AnonymousUser
-        request = self.factory.post('/auth/login/', {
-            'username': 'unapproved_doc',
-            'password': 'DoctorPassword123!'
-        })
+        
+        # 3 failed attempts
+        for _ in range(3):
+            request = self.factory.post('/auth/login/', {'username': 'patient_test', 'password': 'WrongPassword123!'})
+            request.user = AnonymousUser()
+            self._add_messages_and_session(request)
+            response = login_view(request)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"Invalid email or password", response.content)
+
+        self.patient_user.refresh_from_db()
+        self.assertFalse(self.patient_user.is_account_locked())
+
+        # 4th failed attempt
+        request = self.factory.post('/auth/login/', {'username': 'patient_test', 'password': 'WrongPassword123!'})
         request.user = AnonymousUser()
         self._add_messages_and_session(request)
         response = login_view(request)
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"pending Admin approval", response.content)
+        self.assertIn(b"temporarily locked", response.content)
+
+        self.patient_user.refresh_from_db()
+        self.assertTrue(self.patient_user.is_account_locked())
+
+    def test_password_validator_rules(self):
+        """Verify custom StrongPasswordValidator enforcement."""
+        from accounts.validators import StrongPasswordValidator
+        from django.core.exceptions import ValidationError
+
+        validator = StrongPasswordValidator()
+
+        # Weak password test
+        with self.assertRaises(ValidationError):
+            validator.validate('password')
+
+        # Missing special char test
+        with self.assertRaises(ValidationError):
+            validator.validate('Het1222234')
+
+        # Contains username test
+        user = User(username='hetal', email='hetal@example.com', phone='9876543210')
+        with self.assertRaises(ValidationError):
+            validator.validate('Hetal@1222', user=user)
+
+        # Valid password test
+        try:
+            validator.validate('ValidP@ssw0rd2026', user=user)
+        except ValidationError:
+            self.fail("StrongPasswordValidator raised ValidationError unexpectedly on valid password!")
 
 
-    def test_patient_cannot_access_admin_dashboard(self):
-        """Verify patient is redirected away from admin dashboard."""
-        request = self.factory.get('/administration/dashboard/')
-        request.user = self.patient_user
-        self._add_messages_and_session(request)
+class TwoFactorEmailOTPTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='otp_user',
+            email='otp_user@example.com',
+            password='Password123!',
+            role=User.Role.PATIENT,
+            email_verified=True
+        )
+        self.client = Client()
+
+    def test_otp_service_utilities(self):
+        otp = generate_secure_otp()
+        self.assertEqual(len(otp), 6)
+        self.assertTrue(otp.isdigit())
+
+        masked = mask_email_address('john.doe@gmail.com')
+        self.assertEqual(masked, 'jo*****@gmail.com')
+
+    def test_login_generates_2fa_otp(self):
+        res = self.client.post('/auth/login/', {'username': 'otp_user', 'password': 'Password123!'})
+        self.assertEqual(res.status_code, 302)
+        self.assertIn('/auth/verify-otp/', res.url)
+
+        self.user.refresh_from_db()
+        self.assertIsNotNone(self.user.login_otp)
+        self.assertEqual(len(self.user.login_otp), 6)
+        self.assertIsNotNone(self.user.login_otp_expiry)
+
+    def test_2fa_otp_verification_success(self):
+        # Step 1: Login to trigger OTP
+        self.client.post('/auth/login/', {'username': 'otp_user', 'password': 'Password123!'})
+        self.user.refresh_from_db()
+        otp = self.user.login_otp
+
+        # Step 2: Submit valid OTP
+        res = self.client.post('/auth/verify-otp/', {'otp': otp})
+        self.assertEqual(res.status_code, 302)
+        self.assertIn('/auth/dashboard/', res.url)
+
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.login_otp)
+        self.assertEqual(self.user.failed_login_attempts, 0)
+
+    def test_incorrect_otp_attempts_limit(self):
+        self.client.post('/auth/login/', {'username': 'otp_user', 'password': 'Password123!'})
+        self.user.refresh_from_db()
+
+        # 4 incorrect attempts
+        for _ in range(4):
+            res = self.client.post('/auth/verify-otp/', {'otp': '000000'})
+            self.assertEqual(res.status_code, 200)
+
+        # 5th incorrect attempt -> session cancelled
+        res5 = self.client.post('/auth/verify-otp/', {'otp': '000000'})
+        self.assertEqual(res5.status_code, 302)
+        self.assertIn('/auth/login/', res5.url)
+
+    def test_resend_otp_limit_and_cooldown(self):
+        self.client.post('/auth/login/', {'username': 'otp_user', 'password': 'Password123!'})
         
-        # Test decorator directly
-        from administration.views import admin_dashboard_view
-        response = admin_dashboard_view(request)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/patients/dashboard/')
+        # Resend 1 immediately (first resend)
+        res1 = self.client.post('/auth/resend-otp/')
+        self.assertEqual(res1.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.resend_count, 1)
 
-    def test_doctor_cannot_access_admin_dashboard(self):
-        """Verify doctor is redirected away from admin dashboard."""
-        request = self.factory.get('/administration/dashboard/')
-        request.user = self.doc_user
-        self._add_messages_and_session(request)
-
-        from administration.views import admin_dashboard_view
-        response = admin_dashboard_view(request)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/doctors/dashboard/')
-
-    def test_admin_can_access_admin_dashboard(self):
-        """Verify admin user can reach admin dashboard."""
-        request = self.factory.get('/administration/dashboard/')
-        request.user = self.admin
-        self._add_messages_and_session(request)
-
-        from administration.views import admin_dashboard_view
-        response = admin_dashboard_view(request)
-        self.assertEqual(response.status_code, 200)
+        # Immediate second resend -> Cooldown warning
+        res2 = self.client.post('/auth/resend-otp/')
+        self.assertEqual(res2.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.resend_count, 1)

@@ -1,67 +1,128 @@
 {% extends 'base.html' %}
 
-{% block title %}My Appointments Calendar | Patient Portal{% endblock %}
+{% block title %}My Appointments History | Patient Portal{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid py-4">
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="fw-bold m-0">My Appointments & Calendar Schedule</h3>
-            <p class="text-muted small m-0">Interactive schedule view of all your consultations</p>
+            <h3 class="fw-bold m-0 text-dark">My Appointments History</h3>
+            <p class="text-muted small m-0">Track, reschedule, or cancel your scheduled medical consultations</p>
         </div>
-        <a href="{% url 'book_appointment' %}" class="btn btn-brand-primary rounded-3">
-            <i class="bi bi-calendar-plus me-1"></i> Book New Appointment
+        <a href="{% url 'book_appointment' %}" class="btn btn-primary rounded-3 px-4 fw-semibold">
+            <i class="bi bi-calendar-plus-fill me-1.5"></i>Book New Appointment
         </a>
     </div>
 
-    <!-- FullCalendar Widget -->
-    <div class="card-custom p-4 mb-4">
-        <div id="calendar"></div>
+    <!-- Summary Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-calendar-event-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted font-heading fw-semibold">Total Appointments</small>
+                        <h4 class="fw-bold mb-0 text-dark">{{ total_count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-calendar-check-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted font-heading fw-semibold">Upcoming / Active</small>
+                        <h4 class="fw-bold mb-0 text-dark">{{ upcoming_count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-arrow-repeat fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted font-heading fw-semibold">Rescheduled</small>
+                        <h4 class="fw-bold mb-0 text-dark">{{ rescheduled_count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-danger-subtle text-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-calendar-x-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted font-heading fw-semibold">Cancelled / Expired</small>
+                        <h4 class="fw-bold mb-0 text-dark">{{ cancelled_count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Table View -->
-    <div class="card-custom p-4">
-        <h5 class="fw-bold mb-3 font-heading"><i class="bi bi-list-stars me-2 text-teal" style="color: #0f766e;"></i>Appointments History List</h5>
+    <!-- Main Table Card -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
         <div class="table-responsive">
-            <table class="table table-custom align-middle mb-0">
-                <thead>
+            <table class="table align-middle table-hover mb-0">
+                <thead class="table-light">
                     <tr>
-                        <th>Doctor / Facility</th>
-                        <th>Specialization</th>
-                        <th>Scheduled Date & Slot</th>
-                        <th>Reason</th>
-                        <th>Status</th>
-                        <th class="text-end">Action</th>
+                        <th class="py-3 ps-3">Doctor / Facility</th>
+                        <th class="py-3">Specialization</th>
+                        <th class="py-3">Date & Time Slot</th>
+                        <th class="py-3">Reason</th>
+                        <th class="py-3">Status</th>
+                        <th class="py-3 pe-3 text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for app in appointments %}
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center gap-2.5">
-                                    <div class="patient-avatar" style="background: linear-gradient(135deg, #0d9488 0%, #0284c7 100%);">
-                                        Dr
-                                    </div>
+                        <tr class="{% if app.is_past %}bg-light text-muted{% endif %}">
+                            <td class="ps-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    {% if app.doctor.profile_photo %}
+                                        <img src="{{ app.doctor.profile_photo.url }}" class="rounded-circle object-fit-cover" style="width: 44px; height: 44px;" alt="Doctor">
+                                    {% else %}
+                                        <div class="patient-avatar d-flex align-items-center justify-content-center fw-bold" style="width: 44px; height: 44px;">
+                                            {{ app.doctor.user.first_name|first|default:"D" }}
+                                        </div>
+                                    {% endif %}
                                     <div>
-                                        <div class="fw-bold text-dark mb-0">Dr. {{ app.doctor.user.get_full_name }}</div>
-                                        <span class="text-muted small"><i class="bi bi-hospital me-1"></i>{{ app.doctor.hospital_name }}</span>
+                                        <div class="fw-bold text-dark fs-6">Dr. {{ app.doctor.user.get_full_name|default:app.doctor.user.username }}</div>
+                                        <small class="text-muted"><i class="bi bi-hospital me-1"></i>{{ app.doctor.hospital_name }}</small>
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                <span class="badge bg-light text-dark border px-2.5 py-1.5 rounded-pill font-heading">
+                                <span class="badge bg-secondary-subtle text-secondary border px-2.5 py-1.5 rounded-pill font-heading">
                                     {{ app.doctor.specialization.name|default:"General Medicine" }}
                                 </span>
                             </td>
                             <td>
-                                <div class="fw-semibold text-dark">{{ app.date|date:"B d, Y" }}</div>
-                                <span class="text-muted small"><i class="bi bi-clock me-1"></i>{{ app.get_time_slot_display_text }}</span>
+                                <div class="fw-semibold {% if app.is_past %}text-secondary{% else %}text-dark{% endif %}">
+                                    <i class="bi bi-calendar-event text-primary me-1"></i>{{ app.date|date:"F d, Y" }}
+                                </div>
+                                <span class="badge bg-light text-dark border mt-1">
+                                    <i class="bi bi-clock me-1 text-teal" style="color: #0f766e;"></i>{{ app.get_time_slot_display_text }}
+                                </span>
                             </td>
                             <td>
-                                <span class="text-secondary small" title="{{ app.reason }}">{{ app.reason|truncatechars:40 }}</span>
+                                <span class="text-secondary small" title="{{ app.reason }}">{{ app.reason|truncatechars:35|default:"General Visit" }}</span>
                             </td>
                             <td>
-                                {% if app.status == 'APPROVED' %}
+                                {% if app.is_past and app.status != 'COMPLETED' and app.status != 'CANCELLED' and app.status != 'REJECTED' %}
+                                    <span class="badge bg-secondary text-white rounded-pill px-3 py-1.5 font-heading"><i class="bi bi-clock-history me-1"></i>Expired / Past</span>
+                                {% elif app.status == 'APPROVED' %}
                                     <span class="app-status-pill status-approved"><i class="bi bi-check-circle-fill me-1"></i>Approved</span>
                                 {% elif app.status == 'PENDING' %}
                                     <span class="app-status-pill status-pending"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
@@ -73,13 +134,40 @@
                                     <span class="app-status-pill status-cancelled"><i class="bi bi-x-circle-fill me-1"></i>{{ app.get_status_display }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end">
-                                {% if app.status != 'CANCELLED' and app.status != 'COMPLETED' and app.status != 'REJECTED' %}
-                                    <a href="{% url 'cancel_appointment' app.id %}" class="btn btn-outline-danger btn-sm rounded-3 px-3 fw-medium">
-                                        <i class="bi bi-x-lg me-1"></i>Cancel
-                                    </a>
+                            <td class="pe-3 text-end">
+                                {% if not app.is_past and app.status != 'CANCELLED' and app.status != 'COMPLETED' and app.status != 'REJECTED' %}
+                                    <div class="btn-group">
+                                        <a href="{% url 'reschedule_appointment' app.id %}" class="btn btn-sm btn-outline-primary rounded-start-3 px-3 fw-semibold">
+                                            <i class="bi bi-calendar-event me-1"></i>Reschedule
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-end-3 px-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#cancelModal{{ app.id }}">
+                                            <i class="bi bi-x-lg me-1"></i>Cancel
+                                        </button>
+                                    </div>
+
+                                    <!-- Cancellation Confirmation Modal -->
+                                    <div class="modal fade text-start" id="cancelModal{{ app.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content border-0 shadow-lg rounded-4">
+                                                <div class="modal-header border-0 pb-0">
+                                                    <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Cancellation</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body p-4">
+                                                    <p class="text-dark mb-3">Are you sure you want to cancel your appointment with <strong>Dr. {{ app.doctor.user.get_full_name }}</strong> on <strong>{{ app.date|date:"F d, Y" }}</strong> at <strong>{{ app.get_time_slot_display_text }}</strong>?</p>
+                                                    <div class="alert alert-warning border-0 rounded-3 small mb-0">
+                                                        <i class="bi bi-info-circle-fill me-1.5"></i>Cancelling will free up this time slot for other patients. You can always book a new appointment later.
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer border-0 pt-0">
+                                                    <button type="button" class="btn btn-outline-secondary rounded-3 px-4" data-bs-dismiss="modal">Keep Appointment</button>
+                                                    <a href="{% url 'cancel_appointment' app.id %}" class="btn btn-danger rounded-3 px-4 fw-bold">Yes, Cancel Appointment</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 {% else %}
-                                    <span class="text-muted small">-</span>
+                                    <span class="text-muted small font-heading">No Actions</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -99,25 +187,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const calendarEl = document.getElementById('calendar');
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek'
-            },
-            events: '/appointments/api/calendar-events/',
-            eventClick: function(info) {
-                alert('Appointment: ' + info.event.title + '\nStart: ' + info.event.start.toLocaleString());
-            }
-        });
-        calendar.render();
-    });
-</script>
 {% endblock %}

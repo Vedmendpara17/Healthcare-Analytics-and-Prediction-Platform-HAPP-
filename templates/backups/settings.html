@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Backup Schedule Settings | Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+                <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                        <i class="bi bi-gear-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold m-0 text-dark">Automated Backup Schedule & Retention</h4>
+                        <p class="text-muted small m-0">Configure automated snapshot frequencies, execution times, and retention periods</p>
+                    </div>
+                </div>
+
+                <form method="post" action="{% url 'backup_settings' %}">
+                    {% csrf_token %}
+
+                    <div class="form-check form-switch mb-4 p-3 bg-light rounded-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <label class="form-check-label fw-bold text-dark" for="{{ form.is_enabled.id_for_label }}">Enable Automated Scheduled Backups</label>
+                            <small class="text-muted d-block">Automatically generate system database and media snapshots periodically.</small>
+                        </div>
+                        {{ form.is_enabled }}
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Backup Frequency</label>
+                            {{ form.frequency }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Scheduled Execution Time</label>
+                            {{ form.backup_time }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-dark">Retention Policy (Days)</label>
+                        {{ form.retention_days }}
+                        <small class="text-muted d-block mt-1">Backups older than this number of days will be automatically purged from system storage.</small>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-4">
+                        <a href="{% url 'admin_backup_dashboard' %}" class="btn btn-outline-secondary rounded-3">
+                            <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                        </a>
+                        <button type="submit" class="btn btn-primary rounded-3 fw-bold px-4">
+                            <i class="bi bi-check-lg me-1"></i>Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

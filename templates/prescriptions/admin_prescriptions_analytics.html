@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+
+{% block title %}e-Prescriptions Audit & Analytics | Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0 text-dark">Prescription Analytics & Audit Monitor</h3>
+            <p class="text-muted small m-0">Administrative oversight, medication volume analytics, and clinical audit records</p>
+        </div>
+        <a href="{% url 'export_prescriptions_csv' %}" class="btn btn-success rounded-3 px-4 fw-semibold">
+            <i class="bi bi-file-earmark-spreadsheet me-1.5"></i>Export CSV Report
+        </a>
+    </div>
+
+    <!-- Analytics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-file-earmark-medical-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted">Total Prescriptions</small>
+                        <h4 class="fw-bold mb-0">{{ total_prescriptions }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-calendar-day fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted">Today's Prescriptions</small>
+                        <h4 class="fw-bold mb-0">{{ todays_prescriptions }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-calendar-month fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted">Monthly Volume</small>
+                        <h4 class="fw-bold mb-0">{{ monthly_prescriptions }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-clock-history fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted">Upcoming Follow-Ups</small>
+                        <h4 class="fw-bold mb-0">{{ follow_ups_upcoming }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-bar-chart-line-fill text-teal me-2" style="color: #0f766e;"></i>Most Prescribed Medications</h5>
+                <div style="height: 250px;">
+                    <canvas id="topMedicationsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Doctor-wise Prescription Distribution</h5>
+                <div style="height: 250px;">
+                    <canvas id="doctorPrescriptionsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit Table -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-list-check me-2"></i>Prescription Audit Records</h5>
+        <div class="table-responsive">
+            <table class="table align-middle table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Rx Number</th>
+                        <th>Issued Date</th>
+                        <th>Doctor</th>
+                        <th>Patient</th>
+                        <th>Diagnosis</th>
+                        <th>Status</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in prescriptions %}
+                        <tr>
+                            <td><span class="fw-bold text-primary">{{ p.prescription_number }}</span></td>
+                            <td><small class="text-muted">{{ p.created_at|date:"Y-m-d H:i" }}</small></td>
+                            <td><span class="fw-semibold">Dr. {{ p.doctor.user.get_full_name }}</span></td>
+                            <td><span>{{ p.patient.get_full_name }}</span></td>
+                            <td><span>{{ p.diagnosis|truncatechars:35 }}</span></td>
+                            <td>
+                                {% if p.prescription_status == 'FINALIZED' %}
+                                    <span class="badge bg-success-subtle text-success px-2.5 py-1 rounded-pill">Finalized</span>
+                                {% else %}
+                                    <span class="badge bg-warning-subtle text-warning px-2.5 py-1 rounded-pill">Draft</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'prescription_detail' p.id %}" class="btn btn-sm btn-outline-primary rounded-3"><i class="bi bi-eye"></i> View</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">No prescription records found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Top Medications Chart
+    const medCtx = document.getElementById('topMedicationsChart').getContext('2d');
+    new Chart(medCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ top_med_names_json|safe }},
+            datasets: [{
+                label: 'Times Prescribed',
+                data: {{ top_med_counts_json|safe }},
+                backgroundColor: '#0f766e',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // Doctor Prescriptions Chart
+    const docCtx = document.getElementById('doctorPrescriptionsChart').getContext('2d');
+    new Chart(docCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ doc_names_json|safe }},
+            datasets: [{
+                data: {{ doc_totals_json|safe }},
+                backgroundColor: ['#0284c7', '#0f766e', '#f59e0b', '#10b981', '#6366f1']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+});
+</script>
+{% endblock %}

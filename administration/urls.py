@@ -13,4 +13,7 @@ urlpatterns = [
     path('analytics/', views.admin_analytics_view, name='admin_analytics'),
     path('export/appointments/csv/', views.export_appointments_csv_view, name='export_appointments_csv'),
     path('broadcast/', views.broadcast_announcement_view, name='broadcast_announcement'),
+    path('reports/', views.admin_medical_reports_view, name='admin_medical_reports'),
+    path('reports/<int:report_id>/delete/', views.admin_delete_medical_report_view, name='admin_delete_medical_report'),
+    path('security/', views.admin_security_dashboard_view, name='admin_security_dashboard'),
 ]

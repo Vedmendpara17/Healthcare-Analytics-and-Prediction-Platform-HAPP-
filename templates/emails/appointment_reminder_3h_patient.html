@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>3-Hour Appointment Reminder</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <div style="background-color: #0f766e; padding: 20px; text-align: center; color: #ffffff;">
+            <h2 style="margin: 0;">⏰ 3-Hour Appointment Reminder</h2>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Your consultation is scheduled for today!</p>
+        </div>
+        <div style="padding: 30px; color: #333333; line-height: 1.6;">
+            <p>Dear <strong>{{ patient_name }}</strong>,</p>
+            <p>This is an automated reminder that your scheduled medical consultation is coming up in approximately <strong>3 hours</strong>.</p>
+            
+            <div style="background-color: #f0fdf4; border-left: 4px solid #0f766e; padding: 18px; margin: 20px 0; border-radius: 6px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold; width: 40%;">Patient Name:</td>
+                        <td style="padding: 6px 0;">{{ patient_name }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold;">Appointment ID:</td>
+                        <td style="padding: 6px 0;">#{{ appointment_id }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold;">Attending Doctor:</td>
+                        <td style="padding: 6px 0;">Dr. {{ doctor_name }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold;">Department / Specialization:</td>
+                        <td style="padding: 6px 0;">{{ specialization|default:"General Medicine" }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold;">Hospital / Facility Name:</td>
+                        <td style="padding: 6px 0;">{{ hospital_name }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold;">Appointment Date:</td>
+                        <td style="padding: 6px 0;">{{ date }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold;">Appointment Time Slot:</td>
+                        <td style="padding: 6px 0; color: #0f766e; font-weight: bold;">{{ time_slot }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold;">Consultation Type:</td>
+                        <td style="padding: 6px 0;">In-Person Hospital Visit / Online Consultation</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold;">Hospital Address / Location:</td>
+                        <td style="padding: 6px 0;">{{ hospital_name }}, Main Clinical Building</td>
+                    </tr>
+                </table>
+            </div>
+
+            <p style="background-color: #fffbeb; border: 1px solid #fef08a; padding: 12px; border-radius: 6px; color: #744210; font-size: 14px;">
+                <strong>Notice:</strong> Please arrive 10 minutes before your time slot. If you need to reschedule or cancel, please update your appointment in your Patient Portal immediately.
+            </p>
+
+            <p style="margin-top: 25px; font-size: 12px; color: #64748b; text-align: center;">Healthcare Analytics & Prediction Platform (HAPP) • Automated Clinical Reminder</p>
+        </div>
+    </div>
+</body>
+</html>

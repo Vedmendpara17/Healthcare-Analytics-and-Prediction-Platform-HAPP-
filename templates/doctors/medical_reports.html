@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Medical Reports | Doctor Workspace{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-file-earmark-medical-fill text-primary me-2"></i>Patient Medical Reports</h2>
+            <p class="text-muted small mb-0">Review diagnostic reports, imaging scans, and lab results uploaded by your assigned patients.</p>
+        </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-light">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-files fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">Assigned Patient Reports</div>
+                        <h4 class="fw-bold mb-0 text-dark">{{ total_count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-light">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-warning text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-exclamation-circle-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">Pending Clinical Review</div>
+                        <h4 class="fw-bold mb-0 text-warning">{{ pending_count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 p-3 bg-white">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-lg-3 col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" value="{{ search_query }}" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Search report or patient...">
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4">
+                <select name="patient_id" class="form-select rounded-3">
+                    <option value="">All Patients</option>
+                    {% for pat in assigned_patients %}
+                        <option value="{{ pat.id }}" {% if selected_patient == pat.id|stringformat:"s" %}selected{% endif %}>
+                            {{ pat.user.get_full_name|default:pat.user.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-4">
+                <select name="category" class="form-select rounded-3">
+                    <option value="">All Categories</option>
+                    {% for cat_val, cat_label in categories %}
+                        <option value="{{ cat_val }}" {% if selected_category == cat_val %}selected{% endif %}>{{ cat_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <select name="status" class="form-select rounded-3">
+                    <option value="">All Statuses</option>
+                    {% for st_val, st_label in statuses %}
+                        <option value="{{ st_val }}" {% if selected_status == st_val %}selected{% endif %}>{{ st_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6 d-flex gap-2">
+                <button type="submit" class="btn btn-primary rounded-3 flex-fill fw-semibold"><i class="bi bi-funnel-fill me-1"></i>Filter</button>
+                <a href="{% url 'doctor_medical_reports' %}" class="btn btn-outline-secondary rounded-3 px-3 d-flex align-items-center justify-content-center" title="Reset Filters"><i class="bi bi-x-lg"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Reports Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Patient Name</th>
+                        <th>Report Details</th>
+                        <th>Category</th>
+                        <th>Upload Date</th>
+                        <th>Status</th>
+                        <th>Doctor Notes</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if reports %}
+                        {% for report in reports %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark">{{ report.patient.user.get_full_name|default:report.patient.user.username }}</div>
+                                    <small class="text-muted">Age: {{ report.patient.age }} | {{ report.patient.gender }}</small>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">{{ report.report_name }}</div>
+                                    <small class="text-muted">{{ report.formatted_size }} • {% if report.is_pdf %}PDF Document{% else %}Image File{% endif %}</small>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">{{ report.report_category }}</span></td>
+                                <td class="small text-muted">{{ report.uploaded_at|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    {% if report.review_status == 'REVIEWED' %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1"><i class="bi bi-check-circle me-1"></i>Reviewed</span>
+                                    {% else %}
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2.5 py-1"><i class="bi bi-clock me-1"></i>Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td class="small text-truncate" style="max-width: 200px;" title="{{ report.doctor_notes|default:'None' }}">
+                                    {{ report.doctor_notes|default:"--" }}
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-start-3" 
+                                                onclick="openPreviewModal('{% url 'preview_medical_report' report.id %}', '{{ report.report_name|escapejs }}', {{ report.is_pdf|yesno:'true,false' }})">
+                                            <i class="bi bi-eye"></i> Preview
+                                        </button>
+                                        <a href="{% url 'download_medical_report' report.id %}" class="btn btn-outline-secondary btn-sm" title="Download">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-success btn-sm rounded-end-3" data-bs-toggle="modal" data-bs-target="#reviewReportModal{{ report.id }}">
+                                            <i class="bi bi-pencil-square"></i> Review
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Review Modal -->
+                            <div class="modal fade" id="reviewReportModal{{ report.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content rounded-4 border-0 shadow">
+                                        <div class="modal-header border-bottom p-4">
+                                            <h5 class="modal-title fw-bold"><i class="bi bi-journal-medical me-2 text-success"></i>Clinical Review - {{ report.report_name }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form method="post" action="{% url 'doctor_review_report' report.id %}">
+                                            {% csrf_token %}
+                                            <div class="modal-body p-4 text-start">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Review Status</label>
+                                                    <select name="review_status" class="form-select rounded-3">
+                                                        <option value="REVIEWED" {% if report.review_status == 'REVIEWED' %}selected{% endif %}>Mark as Reviewed</option>
+                                                        <option value="PENDING" {% if report.review_status == 'PENDING' %}selected{% endif %}>Keep as Pending Review</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Doctor Clinical Notes / Observations</label>
+                                                    <textarea name="doctor_notes" class="form-control rounded-3" rows="4" placeholder="Enter findings, recommendations, or observations for the patient...">{{ report.doctor_notes|default:'' }}</textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer border-top p-3 d-flex justify-content-between">
+                                                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-success rounded-3 fw-semibold"><i class="bi bi-check-circle me-1"></i>Save Review</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
+                                <h5>No Reports Found</h5>
+                                <p class="small mb-0">No medical reports match your search or filters.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% if page_obj.has_other_pages %}
+            <div class="card-footer bg-light border-0 py-3">
+                <nav>
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link rounded-start-3" href="?page={{ page_obj.previous_page_number }}&q={{ search_query }}&patient_id={{ selected_patient }}&category={{ selected_category }}&status={{ selected_status }}">Previous</a></li>
+                        {% endif %}
+                        {% for num in page_obj.paginator.page_range %}
+                            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                                <a class="page-link" href="?page={{ num }}&q={{ search_query }}&patient_id={{ selected_patient }}&category={{ selected_category }}&status={{ selected_status }}">{{ num }}</a>
+                            </li>
+                        {% endfor %}
+                        {% if page_obj.has_next %}
+                            <li class="page-item"><a class="page-link rounded-end-3" href="?page={{ page_obj.next_page_number }}&q={{ search_query }}&patient_id={{ selected_patient }}&category={{ selected_category }}&status={{ selected_status }}">Next</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom p-3 d-flex justify-content-between align-items-center">
+                <h5 class="modal-title fw-bold text-dark" id="previewTitle"><i class="bi bi-eye me-2 text-primary"></i>Report Preview</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <a id="openNewTabBtn" href="#" target="_blank" class="btn btn-sm btn-outline-primary rounded-3 fw-semibold"><i class="bi bi-box-arrow-up-right me-1"></i>Open in New Tab</a>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 bg-dark text-center" style="min-height: 520px; display: flex; align-items: center; justify-content: center;">
+                <iframe id="previewIframe" style="width: 100%; height: 75vh; border: none; display: none;"></iframe>
+                <img id="previewImg" style="max-width: 100%; max-height: 75vh; object-fit: contain; display: none;" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openPreviewModal(url, title, isPdf) {
+    document.getElementById('previewTitle').innerHTML = `<i class="bi bi-eye me-2 text-primary"></i>${title}`;
+    document.getElementById('openNewTabBtn').href = url;
+
+    const iframe = document.getElementById('previewIframe');
+    const img = document.getElementById('previewImg');
+
+    if (isPdf) {
+        img.style.display = 'none';
+        iframe.style.display = 'block';
+        iframe.src = url;
+    } else {
+        iframe.style.display = 'none';
+        img.style.display = 'inline-block';
+        img.src = url;
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('previewReportModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

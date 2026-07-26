@@ -163,9 +163,16 @@ def view_patient_detail_view(request, patient_id):
 @admin_required
 def manage_appointments_view(request):
     status_filter = request.GET.get('status', 'all')
+    today = timezone.now().date()
+    now_time = timezone.now().time().strftime('%H:%M')
+
     appointments = Appointment.objects.select_related('patient', 'doctor__user', 'doctor__specialization').all()
 
-    if status_filter != 'all':
+    if status_filter == 'expired':
+        appointments = appointments.filter(
+            Q(date__lt=today) | Q(date=today, time_slot__lt=now_time)
+        ).exclude(status__in=['COMPLETED', 'CANCELLED', 'REJECTED'])
+    elif status_filter != 'all':
         appointments = appointments.filter(status=status_filter.upper())
 
     return render(request, 'administration/manage_appointments.html', {
@@ -273,3 +280,172 @@ def broadcast_announcement_view(request):
             return redirect('admin_dashboard')
 
     return render(request, 'administration/broadcast.html')
+
+
+# --- Admin Medical Reports & Analytics Views ---
+from django.db.models import Sum
+from django.core.paginator import Paginator
+from patients.models import MedicalReport
+
+@admin_required
+def admin_medical_reports_view(request):
+    today = timezone.now().date()
+    first_of_month = today.replace(day=1)
+
+    all_reports = MedicalReport.objects.filter(is_deleted=False)
+
+    total_reports = all_reports.count()
+    uploaded_today = all_reports.filter(uploaded_at__date=today).count()
+    uploaded_this_month = all_reports.filter(uploaded_at__date__gte=first_of_month).count()
+
+    total_bytes = all_reports.aggregate(total=Sum('file_size'))['total'] or 0
+    if total_bytes < 1024 * 1024:
+        storage_usage_str = f"{round(total_bytes / 1024, 1)} KB"
+    elif total_bytes < 1024 * 1024 * 1024:
+        storage_usage_str = f"{round(total_bytes / (1024 * 1024), 2)} MB"
+    else:
+        storage_usage_str = f"{round(total_bytes / (1024 * 1024 * 1024), 2)} GB"
+
+    # Category breakdown for Chart.js
+    category_counts = list(
+        all_reports.values('report_category')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+    category_labels = [item['report_category'] for item in category_counts]
+    category_data = [item['count'] for item in category_counts]
+
+    import json
+    category_labels_json = json.dumps(category_labels)
+    category_data_json = json.dumps(category_data)
+
+    # Top Uploaders
+    top_uploaders = list(
+        all_reports.values('patient__id', 'patient__user__first_name', 'patient__user__last_name', 'patient__user__username')
+        .annotate(count=Count('id'), total_size=Sum('file_size'))
+        .order_by('-count')[:5]
+    )
+
+    # Search and Filter
+    query = request.GET.get('q', '').strip()
+    category_filter = request.GET.get('category', '').strip()
+    patient_filter = request.GET.get('patient_id', '').strip()
+    doctor_filter = request.GET.get('doctor_id', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+
+    reports_qs = all_reports.select_related('patient', 'patient__user', 'doctor', 'doctor__user', 'appointment')
+
+    if query:
+        reports_qs = reports_qs.filter(
+            Q(report_name__icontains=query) |
+            Q(patient__user__first_name__icontains=query) |
+            Q(patient__user__last_name__icontains=query) |
+            Q(doctor__user__first_name__icontains=query) |
+            Q(doctor__user__last_name__icontains=query)
+        )
+
+    if category_filter:
+        reports_qs = reports_qs.filter(report_category=category_filter)
+
+    if patient_filter:
+        reports_qs = reports_qs.filter(patient_id=patient_filter)
+
+    if doctor_filter:
+        reports_qs = reports_qs.filter(doctor_id=doctor_filter)
+
+    if status_filter:
+        reports_qs = reports_qs.filter(review_status=status_filter)
+
+    reports_qs = reports_qs.order_by('-uploaded_at')
+
+    paginator = Paginator(reports_qs, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    patients_list = PatientProfile.objects.select_related('user').all()
+    doctors_list = DoctorProfile.objects.select_related('user').all()
+
+    context = {
+        'total_reports': total_reports,
+        'uploaded_today': uploaded_today,
+        'uploaded_this_month': uploaded_this_month,
+        'storage_usage_str': storage_usage_str,
+        'category_labels_json': category_labels_json,
+        'category_data_json': category_data_json,
+        'top_uploaders': top_uploaders,
+        'page_obj': page_obj,
+        'reports': page_obj.object_list,
+        'categories': MedicalReport.REPORT_CATEGORIES,
+        'patients_list': patients_list,
+        'doctors_list': doctors_list,
+        'search_query': query,
+        'selected_category': category_filter,
+        'selected_patient': patient_filter,
+        'selected_doctor': doctor_filter,
+        'selected_status': status_filter,
+    }
+    return render(request, 'administration/medical_reports.html', context)
+
+
+@admin_required
+def admin_delete_medical_report_view(request, report_id):
+    report = get_object_or_404(MedicalReport, id=report_id)
+    report_name = report.report_name
+    report.is_deleted = True
+    report.save(update_fields=['is_deleted'])
+
+    AuditLog.objects.create(
+        actor=request.user,
+        action="ADMIN_DELETE_MEDICAL_REPORT",
+        details=f"Admin removed report '{report_name}' (ID {report.id})",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+
+    messages.success(request, f"Report '{report_name}' has been deleted from system registry.")
+    return redirect('admin_medical_reports')
+
+
+@admin_required
+def admin_security_dashboard_view(request):
+    logs_qs = AuditLog.objects.select_related('actor').order_by('-timestamp')
+
+    total_logs = AuditLog.objects.count()
+    successful_logins = AuditLog.objects.filter(action__in=['LOGIN_SUCCESS', 'USER_LOGIN']).count()
+    failed_logins = AuditLog.objects.filter(action='FAILED_LOGIN').count()
+    otp_generated_count = AuditLog.objects.filter(action='OTP_GENERATED').count()
+    otp_failed_count = AuditLog.objects.filter(action='OTP_FAILED').count()
+    password_reset_count = AuditLog.objects.filter(action__in=['PASSWORD_RESET', 'PASSWORD_RESET_REQUEST']).count()
+    locked_accounts_count = User.objects.filter(account_locked_until__isnull=False).count()
+
+    query = request.GET.get('q', '').strip()
+    action_filter = request.GET.get('action', '').strip()
+
+    if query:
+        logs_qs = logs_qs.filter(
+            Q(actor__username__icontains=query) |
+            Q(actor__first_name__icontains=query) |
+            Q(actor__last_name__icontains=query) |
+            Q(details__icontains=query) |
+            Q(ip_address__icontains=query)
+        )
+
+    if action_filter:
+        logs_qs = logs_qs.filter(action=action_filter)
+
+    paginator = Paginator(logs_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'total_logs': total_logs,
+        'successful_logins': successful_logins,
+        'failed_logins': failed_logins,
+        'otp_generated_count': otp_generated_count,
+        'otp_failed_count': otp_failed_count,
+        'password_reset_count': password_reset_count,
+        'locked_accounts_count': locked_accounts_count,
+        'page_obj': page_obj,
+        'logs': page_obj.object_list,
+        'query': query,
+        'action_filter': action_filter
+    }
+    return render(request, 'administration/security_dashboard.html', context)
