@@ -89,7 +89,7 @@ class RoleBasedAccessControlTests(TestCase):
         from django.contrib.auth.models import AnonymousUser
         
         # 3 failed attempts
-        for _ in range(3):
+        for i in range(4):
             request = self.factory.post('/auth/login/', {'username': 'patient_test', 'password': 'WrongPassword123!'})
             request.user = AnonymousUser()
             self._add_messages_and_session(request)
@@ -100,7 +100,7 @@ class RoleBasedAccessControlTests(TestCase):
         self.patient_user.refresh_from_db()
         self.assertFalse(self.patient_user.is_account_locked())
 
-        # 4th failed attempt
+        # 5th failed attempt -> Lockout
         request = self.factory.post('/auth/login/', {'username': 'patient_test', 'password': 'WrongPassword123!'})
         request.user = AnonymousUser()
         self._add_messages_and_session(request)

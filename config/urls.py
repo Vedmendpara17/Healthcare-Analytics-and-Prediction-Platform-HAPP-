@@ -13,6 +13,7 @@ urlpatterns = [
     path('appointments/', include('appointments.urls')),
     path('predictions/', include('predictions.urls')),
     path('prescriptions/', include('prescriptions.urls')),
+    path('payments/', include('payments.urls')),
     path('administration/backups/', include('backups.urls')),
 ]
 

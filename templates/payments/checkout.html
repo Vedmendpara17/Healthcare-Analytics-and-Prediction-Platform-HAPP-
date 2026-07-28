@@ -1,0 +1,457 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout & Payment | Healthcare Platform{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- Step Progress Indicator -->
+            <div class="card-custom p-3 mb-4">
+                <div class="d-flex justify-content-between align-items-center text-center position-relative">
+                    <div class="flex-fill">
+                        <div class="badge rounded-circle bg-success text-white p-2 mb-1" style="width:35px; height:35px;"><i class="bi bi-check-lg fs-6"></i></div>
+                        <div class="small fw-semibold text-muted">Select Doctor</div>
+                    </div>
+                    <div class="flex-fill">
+                        <div class="badge rounded-circle bg-success text-white p-2 mb-1" style="width:35px; height:35px;"><i class="bi bi-check-lg fs-6"></i></div>
+                        <div class="small fw-semibold text-muted">Choose Date & Time</div>
+                    </div>
+                    <div class="flex-fill">
+                        <div class="badge rounded-circle bg-brand-primary text-white p-2 mb-1" style="width:35px; height:35px;">3</div>
+                        <div class="small fw-bold text-brand-primary">Appointment Summary & Pay</div>
+                    </div>
+                    <div class="flex-fill">
+                        <div class="badge rounded-circle bg-light text-muted border p-2 mb-1" style="width:35px; height:35px;">4</div>
+                        <div class="small fw-semibold text-muted">Confirmed Invoice</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Appointment Summary Card -->
+                <div class="col-md-5">
+                    <div class="card-custom p-4 h-100 shadow-sm border-0 bg-white">
+                        <h5 class="fw-bold text-brand-primary mb-3"><i class="bi bi-file-text-fill me-2"></i>Appointment Summary</h5>
+                        <hr class="text-muted opacity-25 mt-0 mb-3">
+                        
+                        <div class="d-flex align-items-center gap-3 mb-3 p-3 rounded-3 bg-light">
+                            <div class="bg-brand-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold fs-4" style="width:50px; height:50px;">
+                                Dr
+                            </div>
+                            <div>
+                                <h6 class="fw-bold m-0 text-dark">Dr. {{ appointment.doctor.user.get_full_name }}</h6>
+                                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">{{ appointment.doctor.specialization.name|default:"General Medicine" }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 small">
+                            <div class="d-flex justify-content-between py-2 border-bottom">
+                                <span class="text-muted"><i class="bi bi-hospital me-1"></i>Hospital</span>
+                                <span class="fw-semibold text-dark">{{ appointment.doctor.hospital_name|default:"HAPP Central Hospital" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 border-bottom">
+                                <span class="text-muted"><i class="bi bi-calendar-event me-1"></i>Date</span>
+                                <span class="fw-semibold text-dark">{{ appointment.date|date:"F d, Y" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 border-bottom">
+                                <span class="text-muted"><i class="bi bi-clock me-1"></i>Time Slot</span>
+                                <span class="fw-semibold text-dark">{{ appointment.get_time_slot_display_text }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 border-bottom">
+                                <span class="text-muted"><i class="bi bi-chat-left-text me-1"></i>Reason</span>
+                                <span class="fw-semibold text-dark text-truncate" style="max-width:160px;">{{ appointment.reason }}</span>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold text-dark mt-4 mb-2">Fee Breakdown</h6>
+                        <div class="bg-light p-3 rounded-3 small mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Consultation Fee</span>
+                                <span class="fw-semibold">₹{{ consultation_fee|floatformat:2 }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Platform Fee</span>
+                                <span class="fw-semibold">₹{{ platform_fee|floatformat:2 }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Tax & Taxes (5%)</span>
+                                <span class="fw-semibold">₹{{ tax|floatformat:2 }}</span>
+                            </div>
+                            {% if discount > 0 %}
+                                <div class="d-flex justify-content-between mb-1 text-success">
+                                    <span>Discount</span>
+                                    <span>-₹{{ discount|floatformat:2 }}</span>
+                                </div>
+                            {% endif %}
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between fs-6 fw-bold text-brand-primary">
+                                <span>Final Amount</span>
+                                <span>₹{{ total_amount|floatformat:2 }}</span>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info small py-2 mb-0 border-0 rounded-3">
+                            <i class="bi bi-shield-check me-1"></i> 100% Simulated Gateway. No real charges.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulated Payment Gateway Options -->
+                <div class="col-md-7">
+                    <div class="card-custom p-4 h-100 shadow-sm border-0 bg-white">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold text-brand-primary m-0"><i class="bi bi-credit-card-2-front-fill me-2"></i>Hospital Payment Gateway Simulator</h5>
+                            <span class="badge bg-secondary-subtle text-secondary border">Simulation Mode</span>
+                        </div>
+                        <p class="text-muted small">Select your preferred payment method below to simulate transaction confirmation.</p>
+                        
+                        <form action="{% url 'process_payment' appointment.id %}" method="POST" id="paymentForm">
+                            {% csrf_token %}
+                            
+                            <!-- Payment Method Navigation Tabs/Radio Cards -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="payment_method" id="pm_upi" value="UPI" checked onclick="showTab('tab_upi')">
+                                    <label class="btn btn-outline-primary w-100 p-2.5 text-start rounded-3 d-flex align-items-center gap-2" for="pm_upi">
+                                        <i class="bi bi-qr-code-scan fs-4"></i>
+                                        <div><div class="fw-bold small">UPI Instant Payment</div><div class="text-muted" style="font-size:0.7rem;">GPay, PhonePe, Paytm, BHIM</div></div>
+                                    </label>
+                                </div>
+
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="payment_method" id="pm_card" value="CREDIT_CARD" onclick="showTab('tab_card')">
+                                    <label class="btn btn-outline-primary w-100 p-2.5 text-start rounded-3 d-flex align-items-center gap-2" for="pm_card">
+                                        <i class="bi bi-credit-card-fill fs-4"></i>
+                                        <div><div class="fw-bold small">Credit / Debit Card</div><div class="text-muted" style="font-size:0.7rem;">Visa, Mastercard, RuPay</div></div>
+                                    </label>
+                                </div>
+
+                                <div class="col-6 mt-2">
+                                    <input type="radio" class="btn-check" name="payment_method" id="pm_netbank" value="NET_BANKING" onclick="showTab('tab_netbank')">
+                                    <label class="btn btn-outline-primary w-100 p-2.5 text-start rounded-3 d-flex align-items-center gap-2" for="pm_netbank">
+                                        <i class="bi bi-bank fs-4"></i>
+                                        <div><div class="fw-bold small">Net Banking</div><div class="text-muted" style="font-size:0.7rem;">SBI, HDFC, ICICI, Axis</div></div>
+                                    </label>
+                                </div>
+
+                                <div class="col-6 mt-2">
+                                    <input type="radio" class="btn-check" name="payment_method" id="pm_cash" value="CASH" onclick="showTab('tab_cash')">
+                                    <label class="btn btn-outline-primary w-100 p-2.5 text-start rounded-3 d-flex align-items-center gap-2" for="pm_cash">
+                                        <i class="bi bi-cash-stack fs-4"></i>
+                                        <div><div class="fw-bold small">Pay at Hospital</div><div class="text-muted" style="font-size:0.7rem;">Cash on arrival</div></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Dynamic Payment Forms -->
+                            <div class="p-3 border rounded-3 bg-light mb-4" id="formContainers">
+                                
+                                <!-- UPI Form -->
+                                <div id="tab_upi" class="pm-tab">
+                                    <h6 class="fw-bold text-dark mb-2">UPI Instant Payment</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold text-muted">Virtual Payment Address (VPA / UPI ID) <span class="text-danger">*</span></label>
+                                        <input type="text" name="upi_id" class="form-control" placeholder="e.g. rahul123@oksbi or john.doe@okaxis" pattern="[a-zA-Z0-9._-]+@[a-zA-Z0-9]+" value="rahul123@oksbi" required>
+                                        <small class="text-muted d-block mt-1">Format: <code>username@bankhandle</code> (e.g. rahul123@oksbi, john.doe@okaxis, patient01@ybl)</small>
+                                    </div>
+                                    <div class="alert alert-warning small py-1.5 mb-0"><i class="bi bi-info-circle me-1"></i> Total amount to be debited: <strong>₹{{ total_amount|floatformat:2 }}</strong></div>
+                                </div>
+
+                                <!-- Card Form -->
+                                <div id="tab_card" class="pm-tab d-none">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="fw-bold text-dark m-0">Credit / Debit Card Details</h6>
+                                        <div id="cardBadgeContainer">
+                                            <span class="badge bg-secondary-subtle text-dark border" id="cardTypeBadge"><i class="bi bi-credit-card me-1"></i>Unknown Card</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold text-muted">Card Holder Name <span class="text-danger">*</span></label>
+                                        <input type="text" id="card_holder" name="card_holder" class="form-control" placeholder="e.g. Rahul Sharma" value="Rahul Sharma" maxlength="50" required>
+                                        <div class="invalid-feedback text-danger small mt-1" id="err_card_holder">Enter a valid card holder name.</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold text-muted">Card Number <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white" id="cardIconSpan"><i class="bi bi-credit-card fs-5 text-muted" id="cardIcon"></i></span>
+                                            <input type="text" id="card_number" name="card_number" class="form-control border-start-0" placeholder="4111 1111 1111 1111" maxlength="23" value="4111 1111 1111 1111" required>
+                                        </div>
+                                        <div class="invalid-feedback text-danger small mt-1" id="err_card_number">Invalid card number.</div>
+                                    </div>
+
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold text-muted">Expiry Date (MM/YY) <span class="text-danger">*</span></label>
+                                            <input type="text" id="expiry_date" name="expiry_date" class="form-control" placeholder="12/29" maxlength="5" value="12/29" required>
+                                            <div class="invalid-feedback text-danger small mt-1" id="err_expiry">Card has expired.</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold text-muted">CVV <span class="text-danger">*</span></label>
+                                            <input type="password" id="cvv" name="cvv" class="form-control" placeholder="123" maxlength="4" value="123" required>
+                                            <div class="invalid-feedback text-danger small mt-1" id="err_cvv">Invalid CVV.</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="text-muted small mt-2"><i class="bi bi-shield-lock-fill me-1 text-success"></i> Only masked card digits (**** **** **** 1111) will be stored. CVV is never saved.</div>
+                                </div>
+
+                                <!-- Net Banking Form -->
+                                <div id="tab_netbank" class="pm-tab d-none">
+                                    <h6 class="fw-bold text-dark mb-2">Net Banking Account Simulation</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold text-muted">Select Your Bank</label>
+                                        <select name="bank_name" class="form-select">
+                                            <option value="State Bank of India">State Bank of India</option>
+                                            <option value="HDFC Bank">HDFC Bank</option>
+                                            <option value="ICICI Bank">ICICI Bank</option>
+                                            <option value="Axis Bank">Axis Bank</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-semibold text-muted">Account Holder Name</label>
+                                        <input type="text" name="account_holder" class="form-control" value="{{ request.user.get_full_name|default:'Patient' }}">
+                                    </div>
+                                </div>
+
+                                <!-- Cash Form -->
+                                <div id="tab_cash" class="pm-tab d-none">
+                                    <h6 class="fw-bold text-dark mb-2">Pay Cash at Hospital Counter</h6>
+                                    <p class="small text-muted mb-2">Your appointment slot will be immediately reserved as <strong>CONFIRMED</strong> with status <strong>Payment Pending</strong>. You can clear fees at the hospital billing desk on your consultation date.</p>
+                                </div>
+
+                            </div>
+
+                            <!-- Simulation Controls (Test Success vs Failure) -->
+                            <div class="mb-3 p-2 bg-light border rounded-3 d-flex align-items-center justify-content-between">
+                                <span class="small fw-semibold text-dark me-2"><i class="bi bi-sliders me-1"></i>Simulator Behavior:</span>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <input type="radio" class="btn-check" name="simulation_outcome" id="sim_success" value="SUCCESS" checked>
+                                    <label class="btn btn-outline-success" for="sim_success"><i class="bi bi-check-circle me-1"></i>Simulate Success</label>
+                                    
+                                    <input type="radio" class="btn-check" name="simulation_outcome" id="sim_failed" value="FAILED">
+                                    <label class="btn btn-outline-danger" for="sim_failed"><i class="bi bi-x-circle me-1"></i>Simulate Failure</label>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex align-items-center justify-content-between pt-2">
+                                <a href="{% url 'cancel_appointment' appointment.id %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                                <button type="submit" class="btn btn-brand-primary px-4 rounded-3 d-flex align-items-center gap-2" id="submitBtn">
+                                    <span id="btnText">Pay ₹{{ total_amount|floatformat:2 }} & Confirm</span>
+                                    <div class="spinner-border spinner-border-sm d-none" id="btnSpinner" role="status"></div>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function showTab(tabId) {
+    document.querySelectorAll('.pm-tab').forEach(el => el.classList.add('d-none'));
+    const target = document.getElementById(tabId);
+    if(target) target.classList.remove('d-none');
+    validateForm();
+}
+
+// Luhn Algorithm Implementation
+function luhnCheck(val) {
+    let checksum = 0;
+    let j = 1;
+    for (let i = val.length - 1; i >= 0; i--) {
+        let calc = 0;
+        calc = Number(val.charAt(i)) * j;
+        if (calc > 9) {
+            checksum += 1;
+            calc -= 10;
+        }
+        checksum += calc;
+        j = (j === 1) ? 2 : 1;
+    }
+    return (checksum % 10) === 0;
+}
+
+// Card Detection Function
+function detectCardType(numberStr) {
+    if (numberStr.startsWith('4')) return 'Visa';
+    if (/^(5[1-5]|2[2-7])/.test(numberStr)) return 'Mastercard';
+    if (/^(60|65|508|353|356)/.test(numberStr)) return 'RuPay';
+    if (/^(34|37)/.test(numberStr)) return 'American Express';
+    return null;
+}
+
+// DOM Elements
+const cardHolderInput = document.getElementById('card_holder');
+const cardNumberInput = document.getElementById('card_number');
+const expiryInput = document.getElementById('expiry_date');
+const cvvInput = document.getElementById('cvv');
+const cardIcon = document.getElementById('cardIcon');
+const cardBadge = document.getElementById('cardTypeBadge');
+const submitBtn = document.getElementById('submitBtn');
+
+// Auto Format Card Number (space every 4 digits)
+cardNumberInput.addEventListener('input', function(e) {
+    let cursorPosition = e.target.selectionStart;
+    let raw = e.target.value.replace(/\D/g, '');
+    let formatted = '';
+    for (let i = 0; i < raw.length; i++) {
+        if (i > 0 && i % 4 === 0) formatted += ' ';
+        formatted += raw[i];
+    }
+    e.target.value = formatted;
+    
+    // Detect Card Type Icon & Badge
+    const cardType = detectCardType(raw);
+    if (cardType === 'Visa') {
+        cardIcon.className = 'bi bi-cc-visa fs-5 text-primary';
+        cardBadge.className = 'badge bg-primary text-white border';
+        cardBadge.innerHTML = '<i class="bi bi-cc-visa me-1"></i>Visa';
+    } else if (cardType === 'Mastercard') {
+        cardIcon.className = 'bi bi-cc-mastercard fs-5 text-warning';
+        cardBadge.className = 'badge bg-warning text-dark border';
+        cardBadge.innerHTML = '<i class="bi bi-cc-mastercard me-1"></i>Mastercard';
+    } else if (cardType === 'RuPay') {
+        cardIcon.className = 'bi bi-credit-card-2-front fs-5 text-success';
+        cardBadge.className = 'badge bg-success text-white border';
+        cardBadge.innerHTML = '<i class="bi bi-credit-card-2-front me-1"></i>RuPay';
+    } else if (cardType === 'American Express') {
+        cardIcon.className = 'bi bi-cc-amex fs-5 text-info';
+        cardBadge.className = 'badge bg-info text-white border';
+        cardBadge.innerHTML = '<i class="bi bi-cc-amex me-1"></i>American Express';
+    } else {
+        cardIcon.className = 'bi bi-credit-card fs-5 text-muted';
+        cardBadge.className = 'badge bg-secondary-subtle text-dark border';
+        cardBadge.innerHTML = '<i class="bi bi-credit-card me-1"></i>Unknown Card';
+    }
+
+    validateForm();
+});
+
+// Auto Format Expiry Date (MM/YY)
+expiryInput.addEventListener('input', function(e) {
+    let raw = e.target.value.replace(/\D/g, '');
+    if (raw.length >= 2) {
+        e.target.value = raw.substring(0, 2) + '/' + raw.substring(2, 4);
+    } else {
+        e.target.value = raw;
+    }
+    validateForm();
+});
+
+// Auto Format CVV (Numbers only)
+cvvInput.addEventListener('input', function(e) {
+    e.target.value = e.target.value.replace(/\D/g, '');
+    validateForm();
+});
+
+cardHolderInput.addEventListener('input', validateForm);
+
+// Complete Validation Function
+function validateForm() {
+    const isCardSelected = document.getElementById('pm_card').checked;
+    if (!isCardSelected) {
+        submitBtn.disabled = false;
+        return true;
+    }
+
+    let isValid = true;
+
+    // 1. Card Holder Name Validation (Letters & spaces only, 3-50 chars)
+    const holderVal = cardHolderInput.value.trim();
+    if (!holderVal || !/^[a-zA-Z\s]{3,50}$/.test(holderVal)) {
+        cardHolderInput.classList.add('is-invalid');
+        document.getElementById('err_card_holder').style.display = 'block';
+        isValid = false;
+    } else {
+        cardHolderInput.classList.remove('is-invalid');
+        document.getElementById('err_card_holder').style.display = 'none';
+    }
+
+    // 2. Card Number Validation (13-19 digits & Luhn Check)
+    const rawCardNum = cardNumberInput.value.replace(/\s/g, '');
+    const cardType = detectCardType(rawCardNum);
+    if (!rawCardNum || !/^\d{13,19}$/.test(rawCardNum) || !luhnCheck(rawCardNum)) {
+        cardNumberInput.classList.add('is-invalid');
+        document.getElementById('err_card_number').style.display = 'block';
+        isValid = false;
+    } else {
+        cardNumberInput.classList.remove('is-invalid');
+        document.getElementById('err_card_number').style.display = 'none';
+    }
+
+    // 3. Expiry Date Validation (MM/YY, Month 01-12, Not Expired)
+    const expVal = expiryInput.value.trim();
+    let expValid = false;
+    if (/^\d{2}\/\d{2}$/.test(expVal)) {
+        const parts = expVal.split('/');
+        const m = parseInt(parts[0], 10);
+        const y = parseInt('20' + parts[1], 10);
+        const now = new Date();
+        const curY = now.getFullYear();
+        const curM = now.getMonth() + 1;
+
+        if (m >= 1 && m <= 12) {
+            if (y > curY || (y === curY && m >= curM)) {
+                expValid = true;
+            }
+        }
+    }
+    if (!expValid) {
+        expiryInput.classList.add('is-invalid');
+        document.getElementById('err_expiry').style.display = 'block';
+        isValid = false;
+    } else {
+        expiryInput.classList.remove('is-invalid');
+        document.getElementById('err_expiry').style.display = 'none';
+    }
+
+    // 4. CVV Validation (4 digits for Amex, 3 digits for others)
+    const cvvVal = cvvInput.value.trim();
+    const reqCvvLen = (cardType === 'American Express') ? 4 : 3;
+    if (!cvvVal || !/^\d+$/.test(cvvVal) || cvvVal.length !== reqCvvLen) {
+        cvvInput.classList.add('is-invalid');
+        document.getElementById('err_cvv').innerText = `Invalid CVV (${reqCvvLen} digits required).`;
+        document.getElementById('err_cvv').style.display = 'block';
+        isValid = false;
+    } else {
+        cvvInput.classList.remove('is-invalid');
+        document.getElementById('err_cvv').style.display = 'none';
+    }
+
+    submitBtn.disabled = !isValid;
+    return isValid;
+}
+
+// 2-3 Second Loading Animation & Form Submission
+document.getElementById('paymentForm').addEventListener('submit', function(e) {
+    const isCardSelected = document.getElementById('pm_card').checked;
+    if (isCardSelected && !validateForm()) {
+        e.preventDefault();
+        return false;
+    }
+
+    e.preventDefault();
+    const form = this;
+    
+    submitBtn.disabled = true;
+    document.getElementById('btnText').innerText = "Processing Payment...";
+    document.getElementById('btnSpinner').classList.remove('d-none');
+
+    // Simulate 2.5 second realistic payment processing
+    setTimeout(function() {
+        form.submit();
+    }, 2500);
+});
+
+// Run initial validation on page load
+document.addEventListener('DOMContentLoaded', validateForm);
+</script>
+{% endblock %}

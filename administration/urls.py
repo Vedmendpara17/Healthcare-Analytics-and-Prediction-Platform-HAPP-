@@ -16,4 +16,5 @@ urlpatterns = [
     path('reports/', views.admin_medical_reports_view, name='admin_medical_reports'),
     path('reports/<int:report_id>/delete/', views.admin_delete_medical_report_view, name='admin_delete_medical_report'),
     path('security/', views.admin_security_dashboard_view, name='admin_security_dashboard'),
+    path('security/unlock/<int:user_id>/', views.admin_unlock_user_view, name='admin_unlock_user'),
 ]

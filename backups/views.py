@@ -101,34 +101,12 @@ def download_backup_view(request, backup_id):
     AuditLog.objects.create(
         actor=request.user,
         action="BACKUP_DOWNLOADED",
-        details=f"Downloaded backup SQL dump file '{record.backup_name}' ({record.get_formatted_file_size()})",
+        details=f"Downloaded AES-256 password-protected backup archive '{record.backup_name}' ({record.get_formatted_file_size()})",
         ip_address=request.META.get('REMOTE_ADDR')
     )
 
-    sql_filename = record.backup_name
-    if not sql_filename.endswith('.sql'):
-        sql_filename = sql_filename.replace('.zip', '.sql')
-        if not sql_filename.endswith('.sql'):
-            sql_filename += '.sql'
-
-    try:
-        with open(file_path, 'rb') as f:
-            header = f.readline()
-            payload_bytes = f.read()
-
-        import io, zipfile
-        with zipfile.ZipFile(io.BytesIO(payload_bytes)) as z:
-            sql_files = [item for item in z.namelist() if item.endswith('.sql')]
-            if sql_files:
-                sql_data = z.read(sql_files[0])
-            else:
-                sql_data = payload_bytes
-    except Exception:
-        with open(file_path, 'rb') as f:
-            sql_data = f.read()
-
-    response = HttpResponse(sql_data, content_type='application/sql')
-    response['Content-Disposition'] = f'attachment; filename="{sql_filename}"'
+    response = FileResponse(open(file_path, 'rb'), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{record.backup_name}"'
     return response
 
 

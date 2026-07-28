@@ -54,14 +54,63 @@
 
         <div class="col-md-3">
             <div class="stat-card d-flex align-items-center gap-3">
-                <div class="stat-icon bg-danger-subtle text-danger">
-                    <i class="bi bi-activity"></i>
+                <div class="stat-icon bg-info-subtle text-info">
+                    <i class="bi bi-credit-card-check-fill"></i>
                 </div>
                 <div>
-                    <div class="text-muted small">High Risk Patients</div>
-                    <div class="fs-3 fw-bold text-danger">{{ high_risk }}</div>
+                    <div class="text-muted small">Today's Paid Appts</div>
+                    <div class="fs-3 fw-bold text-info">{{ todays_paid_appointments.count }}</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Paid Appointments Widget for Doctor -->
+    <div class="card-custom p-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+            <h5 class="fw-bold m-0 text-brand-primary"><i class="bi bi-patch-check-fill me-2"></i>Today's & Upcoming Paid Appointments</h5>
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill">Verified Payments</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-custom align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Patient Name</th>
+                        <th>Appt Date</th>
+                        <th>Time Slot</th>
+                        <th>Appt #</th>
+                        <th>Payment Status</th>
+                        <th>Consultation Fee</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in todays_paid_appointments %}
+                        <tr>
+                            <td><span class="fw-semibold text-dark">{{ app.patient.get_full_name|default:app.patient.username }}</span></td>
+                            <td><span class="badge bg-light text-dark border">{{ app.date|date:"M d, Y" }} (Today)</span></td>
+                            <td><i class="bi bi-clock me-1 text-muted"></i>{{ app.get_time_slot_display_text }}</td>
+                            <td><code class="text-primary">APT-{{ app.id|stringformat:"06d" }}</code></td>
+                            <td><span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>PAID</span></td>
+                            <td class="fw-bold text-dark">₹{{ app.payment.amount }}</td>
+                        </tr>
+                    {% empty %}
+                        {% for app in upcoming_paid_appointments %}
+                            <tr>
+                                <td><span class="fw-semibold text-dark">{{ app.patient.get_full_name|default:app.patient.username }}</span></td>
+                                <td><span class="badge bg-light text-dark border">{{ app.date|date:"M d, Y" }}</span></td>
+                                <td><i class="bi bi-clock me-1 text-muted"></i>{{ app.get_time_slot_display_text }}</td>
+                                <td><code class="text-primary">APT-{{ app.id|stringformat:"06d" }}</code></td>
+                                <td><span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>PAID</span></td>
+                                <td class="fw-bold text-dark">₹{{ app.payment.amount }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-3">No paid appointments scheduled for today or upcoming.</td>
+                            </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 

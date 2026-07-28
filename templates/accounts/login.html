@@ -16,25 +16,42 @@
                     <p class="text-muted small">Access your Patient, Doctor, or Admin account</p>
                 </div>
 
-                <form method="post">
+                {% if is_locked %}
+                    <div class="alert alert-danger border-danger shadow-sm rounded-3 mb-4 p-3" id="lockoutBanner">
+                        <div class="d-flex align-items-center gap-2 fw-bold text-danger mb-1">
+                            <i class="bi bi-lock-fill fs-5"></i> Account Temporarily Locked
+                        </div>
+                        <p class="small m-0 text-dark">
+                            Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.
+                        </p>
+                        <div class="mt-2 p-2 bg-white rounded border border-danger-subtle text-center fw-bold text-danger fs-6" id="countdownBox">
+                            Remaining lock time: <span id="timerMinutes">00</span>m <span id="timerSeconds">00</span>s
+                        </div>
+                        <div class="text-center mt-2">
+                            <a href="{% url 'forgot_password_otp' %}" class="btn btn-sm btn-outline-danger rounded-3"><i class="bi bi-key me-1"></i>Reset Password Now</a>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <form method="post" id="loginForm">
                     {% csrf_token %}
                     <div class="mb-3">
                         <label for="id_username" class="form-label fw-semibold">Username or Email</label>
-                        <input type="text" name="username" class="form-control rounded-3" id="id_username" placeholder="Username or Email" required value="{{ request.POST.username|default:'' }}">
+                        <input type="text" name="username" class="form-control rounded-3" id="id_username" placeholder="Username or Email" required value="{{ request.POST.username|default:'' }}" {% if is_locked %}disabled{% endif %}>
                     </div>
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label for="id_password" class="form-label fw-semibold mb-0">Password</label>
-                            <a href="{% url 'password_reset' %}" class="small text-brand-primary text-decoration-none">Forgot password?</a>
+                            <a href="{% url 'forgot_password_otp' %}" class="small text-brand-primary text-decoration-none fw-semibold">Forgot password?</a>
                         </div>
                         <div class="input-group">
-                            <input type="password" name="password" class="form-control rounded-start-3" id="id_password" placeholder="Password" required>
-                            <button class="btn btn-outline-secondary rounded-end-3" type="button" id="togglePassword">
+                            <input type="password" name="password" class="form-control rounded-start-3" id="id_password" placeholder="Password" required {% if is_locked %}disabled{% endif %}>
+                            <button class="btn btn-outline-secondary rounded-end-3" type="button" id="togglePassword" {% if is_locked %}disabled{% endif %}>
                                 <i class="bi bi-eye" id="toggleIcon"></i>
                             </button>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-brand-primary w-100 mt-3 py-2 fw-semibold">Log In</button>
+                    <button type="submit" id="loginSubmitBtn" class="btn btn-brand-primary w-100 mt-3 py-2 fw-semibold" {% if is_locked %}disabled{% endif %}>Log In</button>
                 </form>
 
                 <script>
@@ -51,6 +68,38 @@
                             icon.classList.add('bi-eye');
                         }
                     });
+
+                    {% if is_locked and remaining_seconds > 0 %}
+                    let totalSeconds = {{ remaining_seconds }};
+                    const submitBtn = document.getElementById('loginSubmitBtn');
+                    const usernameInput = document.getElementById('id_username');
+                    const passwordInput = document.getElementById('id_password');
+                    const toggleBtn = document.getElementById('togglePassword');
+                    const minutesSpan = document.getElementById('timerMinutes');
+                    const secondsSpan = document.getElementById('timerSeconds');
+
+                    function updateTimer() {
+                        if (totalSeconds <= 0) {
+                            clearInterval(timerInterval);
+                            submitBtn.disabled = false;
+                            usernameInput.disabled = false;
+                            passwordInput.disabled = false;
+                            if (toggleBtn) toggleBtn.disabled = false;
+                            document.getElementById('lockoutBanner').className = 'alert alert-success border-success shadow-sm rounded-3 mb-4 p-3';
+                            document.getElementById('lockoutBanner').innerHTML = '<i class="bi bi-unlock-fill me-1"></i> Account unlocked! You may now try logging in.';
+                            return;
+                        }
+
+                        const m = Math.floor(totalSeconds / 60);
+                        const s = totalSeconds % 60;
+                        minutesSpan.innerText = m < 10 ? '0' + m : m;
+                        secondsSpan.innerText = s < 10 ? '0' + s : s;
+                        totalSeconds--;
+                    }
+
+                    updateTimer();
+                    const timerInterval = setInterval(updateTimer, 1000);
+                    {% endif %}
                 </script>
 
                 <div class="mt-3 text-center">

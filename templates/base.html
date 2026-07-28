@@ -375,6 +375,9 @@
                         <a class="nav-link {% if request.resolver_match.url_name == 'admin_security_dashboard' %}active{% endif %}" href="{% url 'admin_security_dashboard' %}">
                             <i class="bi bi-shield-lock-fill"></i> 2FA Security Audit
                         </a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'admin_payment_analytics' %}active{% endif %}" href="{% url 'admin_payment_analytics' %}">
+                            <i class="bi bi-credit-card-fill"></i> Payment Analytics
+                        </a>
                         <a class="nav-link {% if 'backup' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_backup_dashboard' %}">
                             <i class="bi bi-cloud-arrow-up-fill"></i> Backup & Recovery
                         </a>
@@ -414,6 +417,9 @@
                         </a>
                         <a class="nav-link {% if request.resolver_match.url_name == 'patient_appointments_list' %}active{% endif %}" href="{% url 'patient_appointments_list' %}">
                             <i class="bi bi-calendar-check-fill"></i> My Appointments
+                        </a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'patient_payments' %}active{% endif %}" href="{% url 'patient_payments' %}">
+                            <i class="bi bi-credit-card-2-front-fill"></i> My Payments
                         </a>
                         <a class="nav-link {% if request.resolver_match.url_name == 'patient_prescriptions_list' %}active{% endif %}" href="{% url 'patient_prescriptions_list' %}">
                             <i class="bi bi-file-earmark-medical-fill"></i> My Prescriptions

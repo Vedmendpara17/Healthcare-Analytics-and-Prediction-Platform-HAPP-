@@ -27,6 +27,15 @@ def doctor_dashboard_view(request):
     
     recent_assessments = RiskAssessment.objects.filter(doctor=doctor).select_related('patient__user')[:5]
 
+    # Paid appointments stats & list for Doctor (excluding sensitive payment credentials)
+    todays_paid_appointments = Appointment.objects.filter(
+        doctor=doctor, date=today, payment__payment_status='PAID'
+    ).select_related('patient', 'payment')
+
+    upcoming_paid_appointments = Appointment.objects.filter(
+        doctor=doctor, date__gt=today, payment__payment_status='PAID'
+    ).select_related('patient', 'payment')[:10]
+
     low_risk = RiskAssessment.objects.filter(doctor=doctor, computed_level='LOW').count()
     med_risk = RiskAssessment.objects.filter(doctor=doctor, computed_level='MEDIUM').count()
     high_risk = RiskAssessment.objects.filter(doctor=doctor, computed_level='HIGH').count()
@@ -35,6 +44,8 @@ def doctor_dashboard_view(request):
         'doctor': doctor,
         'todays_appointments': todays_appointments,
         'pending_appointments': pending_appointments,
+        'todays_paid_appointments': todays_paid_appointments,
+        'upcoming_paid_appointments': upcoming_paid_appointments,
         'doctor_patients_count': doctor_patients.count(),
         'recent_assessments': recent_assessments,
         'low_risk': low_risk,

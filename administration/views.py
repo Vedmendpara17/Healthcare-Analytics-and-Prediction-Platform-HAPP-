@@ -408,21 +408,17 @@ def admin_delete_medical_report_view(request, report_id):
 @admin_required
 def admin_security_dashboard_view(request):
     logs_qs = AuditLog.objects.select_related('actor').order_by('-timestamp')
-
-    total_logs = AuditLog.objects.count()
-    successful_logins = AuditLog.objects.filter(action__in=['LOGIN_SUCCESS', 'USER_LOGIN']).count()
-    failed_logins = AuditLog.objects.filter(action='FAILED_LOGIN').count()
-    otp_generated_count = AuditLog.objects.filter(action='OTP_GENERATED').count()
-    otp_failed_count = AuditLog.objects.filter(action='OTP_FAILED').count()
-    password_reset_count = AuditLog.objects.filter(action__in=['PASSWORD_RESET', 'PASSWORD_RESET_REQUEST']).count()
-    locked_accounts_count = User.objects.filter(account_locked_until__isnull=False).count()
-
-    query = request.GET.get('q', '').strip()
+    role_filter = request.GET.get('role', '').strip()
     action_filter = request.GET.get('action', '').strip()
+    query = request.GET.get('q', '').strip()
+
+    if role_filter:
+        logs_qs = logs_qs.filter(actor__role=role_filter)
 
     if query:
         logs_qs = logs_qs.filter(
             Q(actor__username__icontains=query) |
+            Q(actor__email__icontains=query) |
             Q(actor__first_name__icontains=query) |
             Q(actor__last_name__icontains=query) |
             Q(details__icontains=query) |
@@ -432,6 +428,29 @@ def admin_security_dashboard_view(request):
     if action_filter:
         logs_qs = logs_qs.filter(action=action_filter)
 
+    total_logs = AuditLog.objects.count()
+    successful_logins = AuditLog.objects.filter(action__in=['LOGIN_SUCCESS', 'USER_LOGIN', 'OTP_VERIFIED']).count()
+    failed_logins = AuditLog.objects.filter(action='FAILED_LOGIN').count()
+    total_login_events = successful_logins + failed_logins
+    
+    success_rate = round((successful_logins / total_login_events * 100), 1) if total_login_events > 0 else 100.0
+    failure_rate = round((failed_logins / total_login_events * 100), 1) if total_login_events > 0 else 0.0
+
+    otp_generated_count = AuditLog.objects.filter(action='OTP_GENERATED').count()
+    otp_failed_count = AuditLog.objects.filter(action='OTP_FAILED').count()
+    password_reset_count = AuditLog.objects.filter(action__in=['PASSWORD_RESET', 'PASSWORD_RESET_REQUEST']).count()
+
+    now = timezone.now()
+    locked_users = User.objects.filter(
+        Q(account_locked=True) | Q(lock_until__gt=now) | Q(account_locked_until__gt=now)
+    )
+    locked_accounts_count = locked_users.count()
+
+    recently_unlocked_users = User.objects.filter(
+        account_locked=False,
+        failed_login_attempts=0
+    ).exclude(last_successful_login__isnull=True).order_by('-updated_at')[:5]
+
     paginator = Paginator(logs_qs, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
 
@@ -439,13 +458,35 @@ def admin_security_dashboard_view(request):
         'total_logs': total_logs,
         'successful_logins': successful_logins,
         'failed_logins': failed_logins,
+        'success_rate': success_rate,
+        'failure_rate': failure_rate,
         'otp_generated_count': otp_generated_count,
         'otp_failed_count': otp_failed_count,
         'password_reset_count': password_reset_count,
         'locked_accounts_count': locked_accounts_count,
+        'locked_users': locked_users,
+        'recently_unlocked_users': recently_unlocked_users,
         'page_obj': page_obj,
         'logs': page_obj.object_list,
         'query': query,
+        'role_filter': role_filter,
         'action_filter': action_filter
     }
     return render(request, 'administration/security_dashboard.html', context)
+
+
+@admin_required
+def admin_unlock_user_view(request, user_id):
+    """Allows Admin to manually unlock a user account."""
+    target_user = get_object_or_404(User, id=user_id)
+    target_user.unlock_account()
+
+    AuditLog.objects.create(
+        actor=request.user,
+        action="ADMIN_UNLOCK_USER",
+        details=f"Admin {request.user.username} manually unlocked user {target_user.username} (Role: {target_user.get_role_display()})",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+
+    messages.success(request, f"User account '{target_user.get_full_name() or target_user.username}' has been successfully unlocked.")
+    return redirect('admin_security_dashboard')

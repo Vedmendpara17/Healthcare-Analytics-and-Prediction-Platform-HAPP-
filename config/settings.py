@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'core.apps.CoreConfig',
     'prescriptions.apps.PrescriptionsConfig',
     'backups.apps.BackupsConfig',
+    'payments.apps.PaymentsConfig',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

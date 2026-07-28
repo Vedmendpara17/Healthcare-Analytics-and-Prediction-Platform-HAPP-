@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Confirmation | Invoice #{{ payment.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            
+            <div class="card-custom p-4 p-md-5 text-center shadow-lg border-0 bg-white position-relative">
+                
+                {% if payment.payment_status == 'PAID' %}
+                    <div class="mb-3">
+                        <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 80px; height: 80px;">
+                            <i class="bi bi-check-lg display-4"></i>
+                        </div>
+                    </div>
+                    <h2 class="fw-bold text-success font-heading mb-1">Payment Successful!</h2>
+                    <p class="text-muted mb-4">Your appointment with <strong>Dr. {{ payment.doctor.user.get_full_name }}</strong> has been officially confirmed.</p>
+                {% else %}
+                    <div class="mb-3">
+                        <div class="bg-warning text-dark rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 80px; height: 80px;">
+                            <i class="bi bi-clock-history display-4"></i>
+                        </div>
+                    </div>
+                    <h2 class="fw-bold text-warning font-heading mb-1">Appointment Confirmed (Cash Payment Pending)</h2>
+                    <p class="text-muted mb-4">Your slot is reserved. Please clear consultation fees at hospital reception desk.</p>
+                {% endif %}
+
+                <!-- Transaction Details Card -->
+                <div class="p-4 rounded-3 bg-light text-start border mb-4">
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3">
+                            <span class="text-muted small d-block">Invoice Number</span>
+                            <strong class="text-brand-primary fs-6">{{ payment.invoice_number }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-muted small d-block">Transaction ID</span>
+                            <strong class="text-dark small">{{ payment.transaction_id }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-muted small d-block">Payment ID</span>
+                            <strong class="text-dark small">{{ payment.payment_id }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-muted small d-block">Appointment #</span>
+                            <strong class="text-dark small">APT-{{ payment.appointment.id|stringformat:"06d" }}</strong>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <span class="text-muted small d-block">Assigned Doctor</span>
+                            <span class="fw-semibold text-dark">Dr. {{ payment.doctor.user.get_full_name }}</span>
+                            <small class="text-muted d-block">{{ payment.doctor.specialization.name|default:"General Medicine" }}</small>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-muted small d-block">Appointment Schedule</span>
+                            <span class="fw-semibold text-dark">{{ payment.appointment.date|date:"F d, Y" }}</span>
+                            <small class="text-muted d-block">{{ payment.appointment.get_time_slot_display_text }}</small>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small d-block">Payment Method & Reference</span>
+                            <span class="badge bg-secondary-subtle text-dark border">{{ payment.get_payment_method_display }}</span>
+                            <span class="small text-muted ms-1">{{ payment.masked_payment_reference }}</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-muted small d-block">Total Paid</span>
+                            <span class="fs-4 fw-bold text-brand-primary">₹{{ payment.total_amount }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice & Actions Bar -->
+                <div class="d-flex flex-wrap align-items-center justify-content-center gap-3">
+                    <a href="{% url 'download_invoice' payment.invoice_number %}" target="_blank" class="btn btn-brand-primary px-4 rounded-3 d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-pdf-fill fs-5"></i>
+                        <span>View / Download PDF Invoice</span>
+                    </a>
+                    
+                    <button onclick="window.print()" class="btn btn-outline-secondary px-4 rounded-3 d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-printer-fill fs-5"></i>
+                        <span>Print Receipt</span>
+                    </button>
+                    
+                    <a href="{% url 'patient_dashboard' %}" class="btn btn-light border px-4 rounded-3">
+                        Go to Dashboard
+                    </a>
+                </div>
+
+                <div class="mt-4 pt-3 border-top text-muted small">
+                    <i class="bi bi-envelope-check me-1 text-success"></i> An automated confirmation email with your PDF invoice attached has been sent to <strong>{{ payment.patient.email }}</strong>.
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -26,7 +26,7 @@
                     </div>
                     <div>
                         <small class="text-muted font-heading fw-semibold">Successful Logins</small>
-                        <h4 class="fw-bold mb-0 text-dark">{{ successful_logins }}</h4>
+                        <h4 class="fw-bold mb-0 text-dark">{{ successful_logins }} <span class="badge bg-success-subtle text-success fs-6 ms-1">{{ success_rate }}%</span></h4>
                     </div>
                 </div>
             </div>
@@ -39,7 +39,7 @@
                     </div>
                     <div>
                         <small class="text-muted font-heading fw-semibold">Failed Password Logins</small>
-                        <h4 class="fw-bold mb-0 text-dark">{{ failed_logins }}</h4>
+                        <h4 class="fw-bold mb-0 text-dark">{{ failed_logins }} <span class="badge bg-danger-subtle text-danger fs-6 ms-1">{{ failure_rate }}%</span></h4>
                     </div>
                 </div>
             </div>
@@ -72,25 +72,106 @@
         </div>
     </div>
 
+    <!-- Locked Accounts Management Section -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold m-0 text-danger"><i class="bi bi-lock-fill me-2"></i>Locked Accounts Control</h5>
+            <span class="badge bg-danger-subtle text-danger px-3 py-1 rounded-pill">{{ locked_users.count }} Locked User(s)</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>User Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Failed Attempts</th>
+                        <th>Last Failed Login</th>
+                        <th>Lock Until (15 Min Expiry)</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in locked_users %}
+                        <tr>
+                            <td><span class="fw-bold text-dark">{{ u.get_full_name|default:u.username }}</span> (<code>{{ u.username }}</code>)</td>
+                            <td>{{ u.email }}</td>
+                            <td><span class="badge bg-secondary-subtle text-dark border">{{ u.get_role_display }}</span></td>
+                            <td><span class="badge bg-danger fs-6">{{ u.failed_login_attempts|default:u.failed_attempts }} / 5</span></td>
+                            <td><small class="text-muted">{{ u.last_failed_login|date:"Y-m-d H:i:s"|default:"N/A" }}</small></td>
+                            <td><span class="fw-semibold text-danger">{{ u.account_locked_until|date:"Y-m-d H:i:s"|default:u.lock_until|date:"Y-m-d H:i:s" }}</span></td>
+                            <td class="text-end">
+                                <a href="{% url 'admin_unlock_user' u.id %}" class="btn btn-sm btn-success rounded-3 fw-semibold">
+                                    <i class="bi bi-unlock-fill me-1"></i>Unlock Account
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-3">No user accounts are currently locked.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recently Unlocked / Cleared Accounts Section -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+        <h5 class="fw-bold mb-3 text-success"><i class="bi bi-shield-check me-2"></i>Recently Unlocked / Active Accounts</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Last Successful Login</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ru in recently_unlocked_users %}
+                        <tr>
+                            <td><span class="fw-semibold text-dark">{{ ru.get_full_name|default:ru.username }}</span></td>
+                            <td>{{ ru.email }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ ru.get_role_display }}</span></td>
+                            <td><span class="badge bg-success-subtle text-success">Unlocked & Normal</span></td>
+                            <td><small class="text-muted">{{ ru.last_successful_login|date:"Y-m-d H:i:s" }}</small></td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-2">No recently unlocked accounts.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Search & Filters -->
     <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
         <form method="get" class="row g-3">
-            <div class="col-md-7">
+            <div class="col-md-5">
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
-                    <input type="text" name="q" value="{{ query }}" class="form-control bg-light border-start-0" placeholder="Search by Username, Details, or IP address...">
+                    <input type="text" name="q" value="{{ query }}" class="form-control bg-light border-start-0" placeholder="Search by Username, Email, or IP address...">
                 </div>
             </div>
             <div class="col-md-3">
+                <select name="role" class="form-select bg-light">
+                    <option value="">All User Roles</option>
+                    <option value="patient" {% if role_filter == 'patient' %}selected{% endif %}>Patient</option>
+                    <option value="doctor" {% if role_filter == 'doctor' %}selected{% endif %}>Doctor</option>
+                    <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admin</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <select name="action" class="form-select bg-light">
                     <option value="">All Security Events</option>
                     <option value="LOGIN_SUCCESS" {% if action_filter == 'LOGIN_SUCCESS' %}selected{% endif %}>LOGIN_SUCCESS</option>
                     <option value="FAILED_LOGIN" {% if action_filter == 'FAILED_LOGIN' %}selected{% endif %}>FAILED_LOGIN</option>
                     <option value="OTP_GENERATED" {% if action_filter == 'OTP_GENERATED' %}selected{% endif %}>OTP_GENERATED</option>
-                    <option value="OTP_VERIFIED" {% if action_filter == 'OTP_VERIFIED' %}selected{% endif %}>OTP_VERIFIED</option>
-                    <option value="OTP_FAILED" {% if action_filter == 'OTP_FAILED' %}selected{% endif %}>OTP_FAILED</option>
-                    <option value="OTP_EXPIRED" {% if action_filter == 'OTP_EXPIRED' %}selected{% endif %}>OTP_EXPIRED</option>
-                    <option value="OTP_RESENT" {% if action_filter == 'OTP_RESENT' %}selected{% endif %}>OTP_RESENT</option>
                     <option value="ACCOUNT_LOCKED" {% if action_filter == 'ACCOUNT_LOCKED' %}selected{% endif %}>ACCOUNT_LOCKED</option>
                 </select>
             </div>

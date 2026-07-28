@@ -71,8 +71,8 @@ def book_appointment_view(request, doctor_id=None):
                             details=f"Booked appointment ID #{appointment.id} with Dr. {doc.user.get_full_name()}"
                         )
 
-                        messages.success(request, "Appointment request submitted successfully! Pending doctor approval.")
-                        return redirect('patient_appointments_list')
+                        messages.info(request, "Appointment details selected. Please proceed to Payment Summary & Confirmation.")
+                        return redirect('checkout', appointment_id=appointment.id)
 
                     except IntegrityError:
                         messages.error(request, "This time slot was booked just a second ago. Please select another slot.")

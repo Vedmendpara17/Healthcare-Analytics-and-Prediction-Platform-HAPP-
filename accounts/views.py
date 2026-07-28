@@ -12,7 +12,7 @@ from .forms import PatientRegistrationForm, DoctorRegistrationForm, CustomLoginF
 from .models import User
 from .otp_service import (
     generate_secure_otp, mask_email_address, send_login_otp_email,
-    send_email_verification_otp, send_password_reset_otp
+    send_email_verification_otp, send_password_reset_otp, send_account_lockout_email
 )
 from patients.models import PatientProfile
 from doctors.models import DoctorProfile
@@ -135,23 +135,28 @@ def login_view(request):
         ip = get_client_ip(request)
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-        # Candidate user lookup
+        # Candidate user lookup (supports both username and email)
         target_user = User.objects.filter(
             models.Q(username__iexact=username_or_email) | models.Q(email__iexact=username_or_email)
         ).first()
 
+        # 1. Lock status MUST be checked before validating password
         if target_user and target_user.is_account_locked():
+            rem_display = target_user.get_remaining_lock_display()
             AuditLog.objects.create(
                 actor=target_user,
                 action="ACCOUNT_LOCKED",
-                details=f"Blocked login attempt for locked account from IP {ip}",
+                details=f"Blocked login attempt for locked account ({target_user.username}) from IP {ip}. Remaining: {rem_display}",
                 ip_address=ip
             )
-            messages.error(
-                request,
-                "Your account has been temporarily locked due to multiple failed login attempts. Please try again after 15 minutes."
-            )
-            return render(request, 'accounts/login.html', {'form': CustomLoginForm(request, data=request.POST)})
+            lock_msg = f"Your account is currently locked. Please try again after the remaining lock time expires ({rem_display})." if rem_display else "Your account has been temporarily locked due to multiple failed login attempts. Please try again after 15 minutes or use the Forgot Password option."
+            messages.error(request, lock_msg)
+            return render(request, 'accounts/login.html', {
+                'form': CustomLoginForm(request, data=request.POST),
+                'is_locked': True,
+                'remaining_seconds': target_user.get_remaining_lock_seconds(),
+                'remaining_display': rem_display
+            })
 
         user = authenticate(request, username=username_or_email, password=password)
         if user is None and target_user:
@@ -159,17 +164,24 @@ def login_view(request):
 
         if user is not None:
             if user.is_account_locked():
+                rem_display = user.get_remaining_lock_display()
                 AuditLog.objects.create(
                     actor=user,
                     action="ACCOUNT_LOCKED",
-                    details=f"Blocked login attempt for locked account from IP {ip}",
+                    details=f"Blocked login attempt for locked account ({user.username}) from IP {ip}. Remaining: {rem_display}",
                     ip_address=ip
                 )
-                messages.error(
-                    request,
-                    "Your account has been temporarily locked due to multiple failed login attempts. Please try again after 15 minutes."
-                )
-                return render(request, 'accounts/login.html', {'form': CustomLoginForm(request, data=request.POST)})
+                lock_msg = f"Your account is currently locked. Please try again after the remaining lock time expires ({rem_display})." if rem_display else "Your account has been temporarily locked due to multiple failed login attempts. Please try again after 15 minutes or use the Forgot Password option."
+                messages.error(request, lock_msg)
+                return render(request, 'accounts/login.html', {
+                    'form': CustomLoginForm(request, data=request.POST),
+                    'is_locked': True,
+                    'remaining_seconds': user.get_remaining_lock_seconds(),
+                    'remaining_display': rem_display
+                })
+
+            # Reset failed attempts counter immediately after successful credentials check
+            user.record_successful_login(ip=ip, user_agent=user_agent)
 
             # Check email verification status
             if not user.email_verified and not user.is_superuser:
@@ -208,7 +220,7 @@ def login_view(request):
             AuditLog.objects.create(
                 actor=user,
                 action="OTP_GENERATED",
-                details=f"Generated 2FA login OTP for {user.username} from IP {ip}",
+                details=f"Generated 2FA login OTP for {user.username} (Role: {user.get_role_display()}) from IP {ip}",
                 ip_address=ip
             )
 
@@ -216,27 +228,42 @@ def login_view(request):
             return redirect('verify_otp')
 
         else:
+            # Generic error message to prevent revealing email existence
+            generic_error = "Invalid email or password."
+            
             if target_user:
-                is_locked = target_user.record_failed_login(ip=ip, user_agent=user_agent)
+                is_locked, remaining_attempts = target_user.record_failed_login(ip=ip, user_agent=user_agent)
                 AuditLog.objects.create(
                     actor=target_user,
                     action="FAILED_LOGIN",
-                    details=f"Failed login attempt ({target_user.failed_login_attempts}/4) from IP {ip}",
+                    details=f"Failed login attempt ({target_user.failed_login_attempts}/5) for user {target_user.username} (Role: {target_user.get_role_display()}) from IP {ip}",
                     ip_address=ip
                 )
                 if is_locked:
+                    send_account_lockout_email(target_user)
                     AuditLog.objects.create(
                         actor=target_user,
                         action="ACCOUNT_LOCKED",
-                        details=f"Account locked after 4 failed attempts from IP {ip}",
+                        details=f"Account locked for 15 minutes after 5 failed attempts from IP {ip}",
                         ip_address=ip
                     )
+                    rem_display = target_user.get_remaining_lock_display()
                     messages.error(
                         request,
-                        "Your account has been temporarily locked due to multiple failed login attempts. Please try again after 15 minutes."
+                        "Your account has been temporarily locked due to multiple failed login attempts. Please try again after 15 minutes or use the Forgot Password option."
                     )
+                    return render(request, 'accounts/login.html', {
+                        'form': CustomLoginForm(request, data=request.POST),
+                        'is_locked': True,
+                        'remaining_seconds': target_user.get_remaining_lock_seconds(),
+                        'remaining_display': rem_display
+                    })
                 else:
-                    messages.error(request, "Invalid email or password.")
+                    messages.error(request, generic_error)
+                    if remaining_attempts == 1:
+                        messages.warning(request, "Account will be locked on the next failed attempt.")
+                    elif remaining_attempts > 0:
+                        messages.info(request, f"You have {remaining_attempts} login attempt{'s' if remaining_attempts > 1 else ''} remaining.")
             else:
                 AuditLog.objects.create(
                     actor=None,
@@ -244,7 +271,7 @@ def login_view(request):
                     details=f"Failed login attempt for unknown user '{username_or_email}' from IP {ip}",
                     ip_address=ip
                 )
-                messages.error(request, "Invalid email or password.")
+                messages.error(request, generic_error)
 
             return render(request, 'accounts/login.html', {'form': CustomLoginForm(request, data=request.POST)})
     else:
@@ -492,6 +519,7 @@ def reset_password_otp_view(request):
         user.set_password(new_password)
         user.password_reset_otp = None
         user.password_reset_otp_expiry = None
+        user.unlock_account()
         user.save(update_fields=['password', 'password_reset_otp', 'password_reset_otp_expiry'])
 
         if 'reset_user_id' in request.session:
