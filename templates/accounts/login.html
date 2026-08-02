@@ -17,7 +17,7 @@
                 </div>
 
                 {% if is_locked %}
-                    <div class="alert alert-danger border-danger shadow-sm rounded-3 mb-4 p-3" id="lockoutBanner">
+                    <div class="alert alert-danger border-danger shadow-sm rounded-3 mb-4 p-3" id="lockoutBanner" data-remaining-seconds="{{ remaining_seconds|default:0 }}">
                         <div class="d-flex align-items-center gap-2 fw-bold text-danger mb-1">
                             <i class="bi bi-lock-fill fs-5"></i> Account Temporarily Locked
                         </div>
@@ -69,37 +69,40 @@
                         }
                     });
 
-                    {% if is_locked and remaining_seconds > 0 %}
-                    let totalSeconds = {{ remaining_seconds }};
-                    const submitBtn = document.getElementById('loginSubmitBtn');
-                    const usernameInput = document.getElementById('id_username');
-                    const passwordInput = document.getElementById('id_password');
-                    const toggleBtn = document.getElementById('togglePassword');
-                    const minutesSpan = document.getElementById('timerMinutes');
-                    const secondsSpan = document.getElementById('timerSeconds');
+                    const lockoutBanner = document.getElementById('lockoutBanner');
+                    if (lockoutBanner) {
+                        let totalSeconds = parseInt(lockoutBanner.getAttribute('data-remaining-seconds') || '0', 10);
+                        if (totalSeconds > 0) {
+                            const submitBtn = document.getElementById('loginSubmitBtn');
+                            const usernameInput = document.getElementById('id_username');
+                            const passwordInput = document.getElementById('id_password');
+                            const toggleBtn = document.getElementById('togglePassword');
+                            const minutesSpan = document.getElementById('timerMinutes');
+                            const secondsSpan = document.getElementById('timerSeconds');
 
-                    function updateTimer() {
-                        if (totalSeconds <= 0) {
-                            clearInterval(timerInterval);
-                            submitBtn.disabled = false;
-                            usernameInput.disabled = false;
-                            passwordInput.disabled = false;
-                            if (toggleBtn) toggleBtn.disabled = false;
-                            document.getElementById('lockoutBanner').className = 'alert alert-success border-success shadow-sm rounded-3 mb-4 p-3';
-                            document.getElementById('lockoutBanner').innerHTML = '<i class="bi bi-unlock-fill me-1"></i> Account unlocked! You may now try logging in.';
-                            return;
+                            function updateTimer() {
+                                if (totalSeconds <= 0) {
+                                    clearInterval(timerInterval);
+                                    if (submitBtn) submitBtn.disabled = false;
+                                    if (usernameInput) usernameInput.disabled = false;
+                                    if (passwordInput) passwordInput.disabled = false;
+                                    if (toggleBtn) toggleBtn.disabled = false;
+                                    lockoutBanner.className = 'alert alert-success border-success shadow-sm rounded-3 mb-4 p-3';
+                                    lockoutBanner.innerHTML = '<i class="bi bi-unlock-fill me-1"></i> Account unlocked! You may now try logging in.';
+                                    return;
+                                }
+
+                                const m = Math.floor(totalSeconds / 60);
+                                const s = totalSeconds % 60;
+                                if (minutesSpan) minutesSpan.innerText = m < 10 ? '0' + m : m;
+                                if (secondsSpan) secondsSpan.innerText = s < 10 ? '0' + s : s;
+                                totalSeconds--;
+                            }
+
+                            updateTimer();
+                            const timerInterval = setInterval(updateTimer, 1000);
                         }
-
-                        const m = Math.floor(totalSeconds / 60);
-                        const s = totalSeconds % 60;
-                        minutesSpan.innerText = m < 10 ? '0' + m : m;
-                        secondsSpan.innerText = s < 10 ? '0' + s : s;
-                        totalSeconds--;
                     }
-
-                    updateTimer();
-                    const timerInterval = setInterval(updateTimer, 1000);
-                    {% endif %}
                 </script>
 
                 <div class="mt-3 text-center">
