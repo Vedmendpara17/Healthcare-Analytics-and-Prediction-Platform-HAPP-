@@ -19,16 +19,16 @@ class PaymentSystemTestCase(TestCase):
             email='patient@test.com',
             password='Password123!',
             role='PATIENT',
-            first_name='John',
-            last_name='Doe'
+            first_name='Aarav',
+            last_name='Sharma'
         )
         self.doctor_user = User.objects.create_user(
             username='doctor_test',
             email='doctor@test.com',
             password='Password123!',
             role='DOCTOR',
-            first_name='Sarah',
-            last_name='Smith'
+            first_name='Sunita',
+            last_name='Kapoor'
         )
         self.spec = Specialization.objects.create(name='Cardiology')
         self.doctor_profile = DoctorProfile.objects.create(
