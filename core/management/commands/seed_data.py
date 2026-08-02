@@ -55,11 +55,25 @@ class Command(BaseCommand):
                 admin_user.save()
                 self.stdout.write("Created Admin user: admin / Admin@1234")
 
-            # 3. Demo Pre-Approved Doctors
+            # Migrate legacy demo usernames if present
+            username_migrations = {
+                'dr_jenkins': 'dr_sunita_sharma',
+                'dr_chen': 'dr_rajesh_patel',
+                'dr_williams': 'dr_ananya_iyer',
+                'dr_vance': 'dr_vikram_malhotra',
+                'dr_foster': 'dr_meera_deshmukh',
+                'dr_miller': 'dr_suresh_kulkarni',
+                'john_doe': 'aarav_sharma',
+                'emily_smith': 'diya_gupta',
+                'michael_brown': 'rohan_singh',
+            }
+            for old_u, new_u in username_migrations.items():
+                User.objects.filter(username=old_u).update(username=new_u)
+
             doctors_data = [
                 {
-                    'username': 'dr_jenkins',
-                    'email': 'jenkins@hospital.org',
+                    'username': 'dr_sunita_sharma',
+                    'email': 'sunita.sharma@hospital.org',
                     'first_name': 'Sunita',
                     'last_name': 'Sharma',
                     'phone': '9876543210',
@@ -72,8 +86,8 @@ class Command(BaseCommand):
                     'bio': 'Senior cardiologist specializing in cardiovascular risk assessment and preventative lipid management.'
                 },
                 {
-                    'username': 'dr_chen',
-                    'email': 'chen@medcenter.org',
+                    'username': 'dr_rajesh_patel',
+                    'email': 'rajesh.patel@medcenter.org',
                     'first_name': 'Rajesh',
                     'last_name': 'Patel',
                     'phone': '9876543211',
@@ -86,8 +100,8 @@ class Command(BaseCommand):
                     'bio': 'Endocrinologist focused on glycemic control, metabolic syndrome, and pre-diabetes risk prediction.'
                 },
                 {
-                    'username': 'dr_williams',
-                    'email': 'williams@care.org',
+                    'username': 'dr_ananya_iyer',
+                    'email': 'ananya.iyer@care.org',
                     'first_name': 'Ananya',
                     'last_name': 'Iyer',
                     'phone': '9876543212',
@@ -100,8 +114,8 @@ class Command(BaseCommand):
                     'bio': 'Primary care physician providing holistic health screening and lifestyle intervention counseling.'
                 },
                 {
-                    'username': 'dr_vance',
-                    'email': 'vance@neuroinst.org',
+                    'username': 'dr_vikram_malhotra',
+                    'email': 'vikram.malhotra@neuroinst.org',
                     'first_name': 'Vikram',
                     'last_name': 'Malhotra',
                     'phone': '9876543213',
@@ -114,8 +128,8 @@ class Command(BaseCommand):
                     'bio': 'Neurologist specializing in brain, nerve function, stroke prevention, and neurological diagnostics.'
                 },
                 {
-                    'username': 'dr_foster',
-                    'email': 'foster@apexortho.org',
+                    'username': 'dr_meera_deshmukh',
+                    'email': 'meera.deshmukh@apexortho.org',
                     'first_name': 'Meera',
                     'last_name': 'Deshmukh',
                     'phone': '9876543214',
@@ -128,8 +142,8 @@ class Command(BaseCommand):
                     'bio': 'Orthopedic surgeon specializing in bone, joint, spinal health, and musculoskeletal system care.'
                 },
                 {
-                    'username': 'dr_miller',
-                    'email': 'miller@sunriseped.org',
+                    'username': 'dr_suresh_kulkarni',
+                    'email': 'suresh.kulkarni@sunriseped.org',
                     'first_name': 'Suresh',
                     'last_name': 'Kulkarni',
                     'phone': '9876543215',
@@ -158,28 +172,46 @@ class Command(BaseCommand):
                 if u_created:
                     u.set_password('Doctor@1234')
                     u.save()
+                else:
+                    u.email = d['email']
+                    u.first_name = d['first_name']
+                    u.last_name = d['last_name']
+                    u.save()
 
-                doc_prof, _ = DoctorProfile.objects.get_or_create(
-                    user=u,
-                    defaults={
-                        'specialization': spec_objects[d['spec']],
-                        'license_number': d['license'],
-                        'qualification': d['qualification'],
-                        'experience_years': d['years'],
-                        'hospital_name': d['hospital'],
-                        'consultation_fee': d['fee'],
-                        'bio': d['bio'],
-                        'is_approved': True  # Pre-approved demo doctor
-                    }
-                )
+                doc_prof = DoctorProfile.objects.filter(license_number=d['license']).first()
+                if not doc_prof:
+                    doc_prof = DoctorProfile.objects.filter(user=u).first()
+
+                if doc_prof:
+                    doc_prof.user = u
+                    doc_prof.specialization = spec_objects[d['spec']]
+                    doc_prof.qualification = d['qualification']
+                    doc_prof.experience_years = d['years']
+                    doc_prof.hospital_name = d['hospital']
+                    doc_prof.consultation_fee = d['fee']
+                    doc_prof.bio = d['bio']
+                    doc_prof.is_approved = True
+                    doc_prof.save()
+                else:
+                    doc_prof = DoctorProfile.objects.create(
+                        user=u,
+                        specialization=spec_objects[d['spec']],
+                        license_number=d['license'],
+                        qualification=d['qualification'],
+                        experience_years=d['years'],
+                        hospital_name=d['hospital'],
+                        consultation_fee=d['fee'],
+                        bio=d['bio'],
+                        is_approved=True
+                    )
                 doc_profiles.append(doc_prof)
-                self.stdout.write(f"Created Doctor: {d['username']} / Doctor@1234 (Pre-approved)")
+                self.stdout.write(f"Created Doctor: Dr. {u.get_full_name()} ({u.username}) / Doctor@1234 (Pre-approved)")
 
             # 4. Demo Patients
             patients_data = [
                 {
-                    'username': 'john_doe',
-                    'email': 'john.doe@gmail.com',
+                    'username': 'aarav_sharma',
+                    'email': 'aarav.sharma@gmail.com',
                     'first_name': 'Aarav',
                     'last_name': 'Sharma',
                     'phone': '9123456789',
@@ -191,8 +223,8 @@ class Command(BaseCommand):
                     'chronic': 'Hypertension'
                 },
                 {
-                    'username': 'emily_smith',
-                    'email': 'emily.smith@yahoo.com',
+                    'username': 'diya_gupta',
+                    'email': 'diya.gupta@yahoo.com',
                     'first_name': 'Diya',
                     'last_name': 'Gupta',
                     'phone': '9123456790',
@@ -204,8 +236,8 @@ class Command(BaseCommand):
                     'chronic': 'None'
                 },
                 {
-                    'username': 'michael_brown',
-                    'email': 'michael.b@outlook.com',
+                    'username': 'rohan_singh',
+                    'email': 'rohan.singh@outlook.com',
                     'first_name': 'Rohan',
                     'last_name': 'Singh',
                     'phone': '9123456791',
@@ -233,6 +265,11 @@ class Command(BaseCommand):
                 if u_created:
                     u.set_password('Patient@1234')
                     u.save()
+                else:
+                    u.email = p['email']
+                    u.first_name = p['first_name']
+                    u.last_name = p['last_name']
+                    u.save()
 
                 pat_prof, _ = PatientProfile.objects.get_or_create(
                     user=u,
@@ -246,7 +283,7 @@ class Command(BaseCommand):
                     }
                 )
                 patient_profiles.append(pat_prof)
-                self.stdout.write(f"Created Patient: {p['username']} / Patient@1234")
+                self.stdout.write(f"Created Patient: {u.get_full_name()} ({u.username}) / Patient@1234")
 
             # 5. Demo Appointments
             today = datetime.date.today()
