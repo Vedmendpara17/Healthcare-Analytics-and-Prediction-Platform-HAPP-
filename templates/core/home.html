@@ -9,10 +9,10 @@
         <div class="row align-items-center position-relative" style="z-index: 2;">
             <div class="col-lg-7">
                 <span class="badge bg-white text-teal mb-3 px-3 py-2 fw-bold rounded-pill font-heading" style="color: #0f766e;">
-                    <i class="bi bi-shield-check me-1.5"></i>2FA-Secured Clinical Decision Support System
+                    <i class="bi bi-shield-check me-1.5"></i>Secured Clinical Decision Support System
                 </span>
                 <h1 class="display-4 fw-bold text-white mb-3 font-heading">AI-Assisted Healthcare Analytics & Predictive Risk Assessment</h1>
-                <p class="lead opacity-90 mb-4">Empowering physicians and patients with structured health data evaluation, early disease risk categorization, electronic prescriptions, and 2FA-secured medical records.</p>
+                <p class="lead opacity-90 mb-4">Empowering physicians and patients with structured health data evaluation, early disease risk categorization, electronic prescriptions, and secured medical records.</p>
                 <div class="d-flex gap-3 flex-wrap">
                     {% if not user.is_authenticated %}
                         <a href="{% url 'register_patient' %}" class="btn btn-light btn-lg fw-bold rounded-3 px-4 shadow text-teal" style="color: #0f766e;">
@@ -40,17 +40,17 @@
         </div>
     </div>
 
-    <!-- Quick Metric Cards -->
-    <div class="row g-4 mb-5">
+    <!-- Quick Navigation Bar -->
+    <div class="row g-3 mb-5">
         <div class="col-md-3">
             <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 border-start border-4 border-teal" style="border-left-color: #0f766e !important;">
                 <div class="d-flex align-items-center gap-3">
                     <div class="bg-teal-subtle text-teal rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; background-color: #e6fffa; color: #0f766e;">
-                        <i class="bi bi-cpu-fill fs-3"></i>
+                        <i class="bi bi-activity fs-3"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">Predictive Analytics</h6>
-                        <small class="text-muted">ML Disease Risk Scoring</small>
+                        <h6 class="fw-bold mb-0 text-dark">Risk Analytics</h6>
+                        <small class="text-muted">Vitals Risk Scoring</small>
                     </div>
                 </div>
             </div>
@@ -62,8 +62,8 @@
                         <i class="bi bi-file-earmark-medical-fill fs-3"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">e-Prescriptions</h6>
-                        <small class="text-muted">QR-Verified PDF Output</small>
+                        <h6 class="fw-bold mb-0 text-dark">Digital Prescriptions</h6>
+                        <small class="text-muted">e-Rx with QR Code</small>
                     </div>
                 </div>
             </div>
@@ -75,8 +75,8 @@
                         <i class="bi bi-shield-lock-fill fs-3"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">2FA Security</h6>
-                        <small class="text-muted">Email OTP Protection</small>
+                        <h6 class="fw-bold mb-0 text-dark">Account Security</h6>
+                        <small class="text-muted">Role-Based Protection</small>
                     </div>
                 </div>
             </div>
@@ -145,8 +145,8 @@
                                         <i class="bi bi-shield-lock fs-5"></i>
                                     </div>
                                     <div>
-                                        <h6 class="fw-bold text-dark">2FA Email OTP Authentication</h6>
-                                        <p class="text-muted small mb-0">Production-grade Two-Factor Authentication requiring a 6-digit Email OTP before account login, backed by 4-attempt password lockout and 5-attempt OTP safeguards.</p>
+                                        <h6 class="fw-bold text-dark">Role-Based Password Authentication</h6>
+                                        <p class="text-muted small mb-0">Production-grade password authentication backed by 5-attempt brute-force lockout safeguards.</p>
                                     </div>
                                 </div>
                             </div>

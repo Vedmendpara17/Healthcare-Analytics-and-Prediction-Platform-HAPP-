@@ -18,24 +18,21 @@ class BackupAndRecoverySystemTests(TestCase):
             password='SuperPassword123!',
             role=User.Role.ADMIN,
             is_staff=True,
-            is_superuser=True,
-            email_verified=True
+            is_superuser=True
         )
 
         self.doctor = User.objects.create_user(
             username='doctor_test',
             email='doc@example.com',
             password='DoctorPassword123!',
-            role=User.Role.DOCTOR,
-            email_verified=True
+            role=User.Role.DOCTOR
         )
 
         self.patient = User.objects.create_user(
             username='patient_test',
             email='patient@example.com',
             password='PatientPassword123!',
-            role=User.Role.PATIENT,
-            email_verified=True
+            role=User.Role.PATIENT
         )
 
     def tearDown(self):

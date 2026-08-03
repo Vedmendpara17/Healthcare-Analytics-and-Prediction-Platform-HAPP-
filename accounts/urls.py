@@ -9,13 +9,6 @@ urlpatterns = [
     path('register/doctor/', views.register_doctor_view, name='register_doctor'),
     path('dashboard/', views.dashboard_redirect_view, name='dashboard_redirect'),
 
-    # 2FA & OTP Verification Routes
-    path('verify-otp/', views.verify_otp_view, name='verify_otp'),
-    path('resend-otp/', views.resend_otp_view, name='resend_otp'),
-    path('verify-email-otp/', views.verify_email_otp_view, name='verify_email_otp'),
-    path('forgot-password-otp/', views.forgot_password_otp_view, name='forgot_password_otp'),
-    path('reset-password-otp/', views.reset_password_otp_view, name='reset_password_otp'),
-
     # Password Reset URLs
     path(
         'password-reset/',

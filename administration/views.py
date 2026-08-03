@@ -429,15 +429,13 @@ def admin_security_dashboard_view(request):
         logs_qs = logs_qs.filter(action=action_filter)
 
     total_logs = AuditLog.objects.count()
-    successful_logins = AuditLog.objects.filter(action__in=['LOGIN_SUCCESS', 'USER_LOGIN', 'OTP_VERIFIED']).count()
+    successful_logins = AuditLog.objects.filter(action__in=['LOGIN_SUCCESS', 'USER_LOGIN']).count()
     failed_logins = AuditLog.objects.filter(action='FAILED_LOGIN').count()
     total_login_events = successful_logins + failed_logins
     
     success_rate = round((successful_logins / total_login_events * 100), 1) if total_login_events > 0 else 100.0
     failure_rate = round((failed_logins / total_login_events * 100), 1) if total_login_events > 0 else 0.0
 
-    otp_generated_count = AuditLog.objects.filter(action='OTP_GENERATED').count()
-    otp_failed_count = AuditLog.objects.filter(action='OTP_FAILED').count()
     password_reset_count = AuditLog.objects.filter(action__in=['PASSWORD_RESET', 'PASSWORD_RESET_REQUEST']).count()
 
     now = timezone.now()
@@ -460,8 +458,6 @@ def admin_security_dashboard_view(request):
         'failed_logins': failed_logins,
         'success_rate': success_rate,
         'failure_rate': failure_rate,
-        'otp_generated_count': otp_generated_count,
-        'otp_failed_count': otp_failed_count,
         'password_reset_count': password_reset_count,
         'locked_accounts_count': locked_accounts_count,
         'locked_users': locked_users,

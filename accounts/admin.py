@@ -8,7 +8,7 @@ class UserAdmin(BaseUserAdmin):
         'username', 'email', 'first_name', 'last_name', 'role',
         'failed_attempts', 'account_locked', 'lock_until', 'is_active'
     )
-    list_filter = ('role', 'account_locked', 'email_verified', 'is_active', 'is_staff')
+    list_filter = ('role', 'account_locked', 'is_active', 'is_staff')
     search_fields = ('username', 'email', 'first_name', 'last_name', 'phone')
     actions = ['unlock_selected_accounts']
 

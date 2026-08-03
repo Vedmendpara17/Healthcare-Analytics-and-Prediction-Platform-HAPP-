@@ -10,10 +10,7 @@ from django.utils import timezone
 
 from .forms import PatientRegistrationForm, DoctorRegistrationForm, CustomLoginForm
 from .models import User
-from .otp_service import (
-    generate_secure_otp, mask_email_address, send_login_otp_email,
-    send_email_verification_otp, send_password_reset_otp, send_account_lockout_email
-)
+from .utils import send_account_lockout_email
 from patients.models import PatientProfile
 from doctors.models import DoctorProfile
 from core.models import AuditLog, Notification
@@ -38,11 +35,6 @@ def register_patient_view(request):
                 user = form.save(commit=False)
                 user.set_password(form.cleaned_data['password'])
                 user.role = User.Role.PATIENT
-                user.email_verified = False
-
-                otp = generate_secure_otp()
-                user.email_verification_otp = otp
-                user.email_verification_expiry = timezone.now() + datetime.timedelta(minutes=5)
                 user.save()
 
                 PatientProfile.objects.create(
@@ -65,11 +57,8 @@ def register_patient_view(request):
                     ip_address=get_client_ip(request)
                 )
 
-                send_email_verification_otp(user, otp)
-
-            request.session['pre_2fa_user_id'] = user.id
-            messages.info(request, "Registration successful! Please enter the email verification OTP sent to your inbox.")
-            return redirect('verify_email_otp')
+            messages.success(request, "Registration successful! You can now log in with your credentials.")
+            return redirect('login')
     else:
         form = PatientRegistrationForm()
 
@@ -87,11 +76,6 @@ def register_doctor_view(request):
                 user = form.save(commit=False)
                 user.set_password(form.cleaned_data['password'])
                 user.role = User.Role.DOCTOR
-                user.email_verified = False
-
-                otp = generate_secure_otp()
-                user.email_verification_otp = otp
-                user.email_verification_expiry = timezone.now() + datetime.timedelta(minutes=5)
                 user.save()
 
                 DoctorProfile.objects.create(
@@ -114,11 +98,8 @@ def register_doctor_view(request):
                     ip_address=get_client_ip(request)
                 )
 
-                send_email_verification_otp(user, otp)
-
-            request.session['pre_2fa_user_id'] = user.id
-            messages.info(request, "Registration submitted! Please verify your email OTP. (Admin approval is also required before full access).")
-            return redirect('verify_email_otp')
+            messages.info(request, "Registration submitted! Admin approval is required before account activation.")
+            return redirect('login')
     else:
         form = DoctorRegistrationForm()
 
@@ -180,21 +161,6 @@ def login_view(request):
                     'remaining_display': rem_display
                 })
 
-            # Reset failed attempts counter immediately after successful credentials check
-            user.record_successful_login(ip=ip, user_agent=user_agent)
-
-            # Check email verification status
-            if not user.email_verified and not user.is_superuser:
-                otp = generate_secure_otp()
-                user.email_verification_otp = otp
-                user.email_verification_expiry = timezone.now() + datetime.timedelta(minutes=5)
-                user.save(update_fields=['email_verification_otp', 'email_verification_expiry'])
-
-                send_email_verification_otp(user, otp)
-                request.session['pre_2fa_user_id'] = user.id
-                messages.warning(request, "Your email address is not verified. A verification code has been sent to your email.")
-                return redirect('verify_email_otp')
-
             # Gating check for unapproved doctors
             if user.role == User.Role.DOCTOR:
                 doc_profile = getattr(user, 'doctor_profile', None)
@@ -205,27 +171,19 @@ def login_view(request):
                     )
                     return render(request, 'accounts/login.html', {'form': CustomLoginForm(request, data=request.POST)})
 
-            # Generate 2FA Login OTP
-            otp = generate_secure_otp()
-            now = timezone.now()
-            user.login_otp = otp
-            user.login_otp_expiry = now + datetime.timedelta(minutes=5)
-            user.otp_attempts = 0
-            user.resend_count = 0
-            user.save(update_fields=['login_otp', 'login_otp_expiry', 'otp_attempts', 'resend_count'])
-
-            request.session['pre_2fa_user_id'] = user.id
-            send_login_otp_email(user, otp)
+            # Successful login without OTP
+            user.record_successful_login(ip=ip, user_agent=user_agent)
+            login(request, user)
 
             AuditLog.objects.create(
                 actor=user,
-                action="OTP_GENERATED",
-                details=f"Generated 2FA login OTP for {user.username} (Role: {user.get_role_display()}) from IP {ip}",
+                action="LOGIN_SUCCESS",
+                details=f"User login successful from IP {ip}",
                 ip_address=ip
             )
 
-            messages.info(request, f"Credentials verified. A 6-digit OTP code has been sent to {mask_email_address(user.email)}.")
-            return redirect('verify_otp')
+            messages.success(request, f"Welcome back, {user.get_full_name() or user.username}!")
+            return redirect('dashboard_redirect')
 
         else:
             # Generic error message to prevent revealing email existence
@@ -278,269 +236,6 @@ def login_view(request):
         form = CustomLoginForm()
 
     return render(request, 'accounts/login.html', {'form': form})
-
-
-def verify_otp_view(request):
-    pre_2fa_user_id = request.session.get('pre_2fa_user_id')
-    if not pre_2fa_user_id:
-        messages.error(request, "Login session expired. Please log in again.")
-        return redirect('login')
-
-    user = get_object_or_404(User, id=pre_2fa_user_id)
-    masked_email = mask_email_address(user.email)
-    ip = get_client_ip(request)
-    now = timezone.now()
-
-    if request.method == 'POST':
-        submitted_otp = request.POST.get('otp', '').strip()
-
-        # Check OTP Expiry
-        if not user.login_otp or not user.login_otp_expiry or now > user.login_otp_expiry:
-            AuditLog.objects.create(
-                actor=user,
-                action="OTP_EXPIRED",
-                details=f"Expired 2FA OTP attempt from IP {ip}",
-                ip_address=ip
-            )
-            messages.error(request, "The OTP code has expired. Please click 'Resend OTP' to receive a new code.")
-            return render(request, 'accounts/verify_otp.html', {
-                'masked_email': masked_email,
-                'expiry_seconds': 0
-            })
-
-        # Incorrect OTP
-        if submitted_otp != user.login_otp:
-            user.otp_attempts += 1
-            user.save(update_fields=['otp_attempts'])
-
-            AuditLog.objects.create(
-                actor=user,
-                action="OTP_FAILED",
-                details=f"Incorrect OTP attempt ({user.otp_attempts}/5) from IP {ip}",
-                ip_address=ip
-            )
-
-            if user.otp_attempts >= 5:
-                # Cancel login session & clear OTP
-                user.login_otp = None
-                user.login_otp_expiry = None
-                user.otp_attempts = 0
-                user.save(update_fields=['login_otp', 'login_otp_expiry', 'otp_attempts'])
-
-                if 'pre_2fa_user_id' in request.session:
-                    del request.session['pre_2fa_user_id']
-
-                messages.error(request, "Too many failed OTP attempts. Your login session has been cancelled. Please log in again.")
-                return redirect('login')
-            else:
-                remaining = 5 - user.otp_attempts
-                messages.error(request, f"Invalid OTP code. Remaining attempts: {remaining}.")
-                expiry_seconds = max(0, int((user.login_otp_expiry - now).total_seconds()))
-                return render(request, 'accounts/verify_otp.html', {
-                    'masked_email': masked_email,
-                    'expiry_seconds': expiry_seconds
-                })
-
-        # Valid OTP
-        user.login_otp = None
-        user.login_otp_expiry = None
-        user.otp_attempts = 0
-        user.resend_count = 0
-        user.save(update_fields=['login_otp', 'login_otp_expiry', 'otp_attempts', 'resend_count'])
-        user.record_successful_login(ip=ip, user_agent=request.META.get('HTTP_USER_AGENT', ''))
-
-        del request.session['pre_2fa_user_id']
-        login(request, user)
-        request.session.cycle_key()
-
-        AuditLog.objects.create(
-            actor=user,
-            action="OTP_VERIFIED",
-            details=f"2FA OTP verified successfully from IP {ip}",
-            ip_address=ip
-        )
-        AuditLog.objects.create(
-            actor=user,
-            action="LOGIN_SUCCESS",
-            details=f"User 2FA login successful from IP {ip}",
-            ip_address=ip
-        )
-
-        messages.success(request, f"Welcome back, {user.get_full_name() or user.username}!")
-        return redirect('dashboard_redirect')
-
-    expiry_seconds = max(0, int((user.login_otp_expiry - now).total_seconds())) if user.login_otp_expiry else 300
-    return render(request, 'accounts/verify_otp.html', {
-        'masked_email': masked_email,
-        'expiry_seconds': expiry_seconds
-    })
-
-
-def resend_otp_view(request):
-    pre_2fa_user_id = request.session.get('pre_2fa_user_id')
-    if not pre_2fa_user_id:
-        messages.error(request, "Login session expired. Please log in again.")
-        return redirect('login')
-
-    user = get_object_or_404(User, id=pre_2fa_user_id)
-    now = timezone.now()
-
-    if user.resend_count >= 3:
-        messages.error(request, "Maximum OTP resend requests (3) reached. Please log in again.")
-        return redirect('login')
-
-    if user.last_resend_time:
-        seconds_since = (now - user.last_resend_time).total_seconds()
-        if seconds_since < 60:
-            rem = int(60 - seconds_since)
-            messages.warning(request, f"Please wait {rem} seconds before requesting another OTP.")
-            return redirect('verify_otp')
-
-    new_otp = generate_secure_otp()
-    user.login_otp = new_otp
-    user.login_otp_expiry = now + datetime.timedelta(minutes=5)
-    user.resend_count += 1
-    user.last_resend_time = now
-    user.save(update_fields=['login_otp', 'login_otp_expiry', 'resend_count', 'last_resend_time'])
-
-    send_login_otp_email(user, new_otp)
-
-    AuditLog.objects.create(
-        actor=user,
-        action="OTP_RESENT",
-        details=f"Resent 2FA login OTP ({user.resend_count}/3) to {user.email}",
-        ip_address=get_client_ip(request)
-    )
-
-    messages.success(request, "A new OTP has been sent to your email.")
-    return redirect('verify_otp')
-
-
-def verify_email_otp_view(request):
-    pre_2fa_user_id = request.session.get('pre_2fa_user_id')
-    if not pre_2fa_user_id:
-        messages.error(request, "Session expired. Please log in.")
-        return redirect('login')
-
-    user = get_object_or_404(User, id=pre_2fa_user_id)
-    masked_email = mask_email_address(user.email)
-    ip = get_client_ip(request)
-
-    if request.method == 'POST':
-        submitted_otp = request.POST.get('otp', '').strip()
-
-        if not user.email_verification_otp or not user.email_verification_expiry or timezone.now() > user.email_verification_expiry:
-            messages.error(request, "Verification OTP has expired. Please request a new code.")
-            return render(request, 'accounts/verify_email_otp.html', {'masked_email': masked_email})
-
-        if submitted_otp == user.email_verification_otp:
-            user.email_verified = True
-            user.email_verification_otp = None
-            user.email_verification_expiry = None
-            user.save(update_fields=['email_verified', 'email_verification_otp', 'email_verification_expiry'])
-
-            AuditLog.objects.create(
-                actor=user,
-                action="EMAIL_VERIFICATION",
-                details=f"Email address verified for {user.username}",
-                ip_address=ip
-            )
-            Notification.objects.create(
-                user=user,
-                message="Your email address has been verified successfully.",
-                notif_type="INFO"
-            )
-
-            if 'pre_2fa_user_id' in request.session:
-                del request.session['pre_2fa_user_id']
-
-            messages.success(request, "Email verified successfully! You can now log in.")
-            return redirect('login')
-        else:
-            messages.error(request, "Invalid email verification code.")
-
-    return render(request, 'accounts/verify_email_otp.html', {'masked_email': masked_email})
-
-
-def forgot_password_otp_view(request):
-    if request.method == 'POST':
-        email = request.POST.get('email', '').strip()
-        user = User.objects.filter(email__iexact=email).first()
-        if user:
-            otp = generate_secure_otp()
-            user.password_reset_otp = otp
-            user.password_reset_otp_expiry = timezone.now() + datetime.timedelta(minutes=10)
-            user.save(update_fields=['password_reset_otp', 'password_reset_otp_expiry'])
-
-            send_password_reset_otp(user, otp)
-
-            AuditLog.objects.create(
-                actor=user,
-                action="PASSWORD_RESET_REQUEST",
-                details=f"Password reset OTP requested for {email}",
-                ip_address=get_client_ip(request)
-            )
-
-            request.session['reset_user_id'] = user.id
-            messages.info(request, "Password reset OTP sent to your registered email.")
-            return redirect('reset_password_otp')
-        else:
-            messages.info(request, "If an account with that email exists, a password reset OTP has been sent.")
-            return redirect('login')
-
-    return render(request, 'accounts/forgot_password_otp.html')
-
-
-def reset_password_otp_view(request):
-    reset_user_id = request.session.get('reset_user_id')
-    if not reset_user_id:
-        messages.error(request, "Session expired. Please request password reset again.")
-        return redirect('forgot_password_otp')
-
-    user = get_object_or_404(User, id=reset_user_id)
-
-    if request.method == 'POST':
-        submitted_otp = request.POST.get('otp', '').strip()
-        new_password = request.POST.get('new_password', '')
-        confirm_password = request.POST.get('confirm_password', '')
-
-        if not user.password_reset_otp or not user.password_reset_otp_expiry or timezone.now() > user.password_reset_otp_expiry:
-            messages.error(request, "Reset OTP code has expired. Please request password reset again.")
-            return redirect('forgot_password_otp')
-
-        if submitted_otp != user.password_reset_otp:
-            messages.error(request, "Invalid reset OTP code.")
-            return render(request, 'accounts/reset_password_otp.html', {'masked_email': mask_email_address(user.email)})
-
-        if new_password != confirm_password:
-            messages.error(request, "Passwords do not match.")
-            return render(request, 'accounts/reset_password_otp.html', {'masked_email': mask_email_address(user.email)})
-
-        user.set_password(new_password)
-        user.password_reset_otp = None
-        user.password_reset_otp_expiry = None
-        user.unlock_account()
-        user.save(update_fields=['password', 'password_reset_otp', 'password_reset_otp_expiry'])
-
-        if 'reset_user_id' in request.session:
-            del request.session['reset_user_id']
-
-        AuditLog.objects.create(
-            actor=user,
-            action="PASSWORD_RESET",
-            details=f"Password reset successfully for {user.username}",
-            ip_address=get_client_ip(request)
-        )
-        Notification.objects.create(
-            user=user,
-            message="Your account password was changed successfully.",
-            notif_type="WARNING"
-        )
-
-        messages.success(request, "Password reset successfully! Please log in with your new password.")
-        return redirect('login')
-
-    return render(request, 'accounts/reset_password_otp.html', {'masked_email': mask_email_address(user.email)})
 
 
 @login_required

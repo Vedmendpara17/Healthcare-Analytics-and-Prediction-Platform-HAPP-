@@ -5,7 +5,6 @@ from django.utils import timezone
 import datetime
 
 from accounts.views import login_view
-from accounts.otp_service import generate_secure_otp, mask_email_address
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
 from appointments.models import Specialization
@@ -24,8 +23,7 @@ class RoleBasedAccessControlTests(TestCase):
             password='AdminPassword123!',
             role=User.Role.ADMIN,
             is_staff=True,
-            is_superuser=True,
-            email_verified=True
+            is_superuser=True
         )
 
         # Approved doctor user
@@ -34,8 +32,7 @@ class RoleBasedAccessControlTests(TestCase):
             email='doctor_test@example.com',
             password='DoctorPassword123!',
             role=User.Role.DOCTOR,
-            phone='9876543210',
-            email_verified=True
+            phone='9876543210'
         )
         self.doc_profile = DoctorProfile.objects.create(
             user=self.doc_user,
@@ -52,8 +49,7 @@ class RoleBasedAccessControlTests(TestCase):
             email='unapproved_doc@example.com',
             password='DoctorPassword123!',
             role=User.Role.DOCTOR,
-            phone='9876543211',
-            email_verified=True
+            phone='9876543211'
         )
         self.unapproved_profile = DoctorProfile.objects.create(
             user=self.unapproved_doc,
@@ -70,8 +66,7 @@ class RoleBasedAccessControlTests(TestCase):
             email='patient_test@example.com',
             password='PatientPassword123!',
             role=User.Role.PATIENT,
-            phone='9123456789',
-            email_verified=True
+            phone='9123456789'
         )
         self.patient_profile = PatientProfile.objects.create(
             user=self.patient_user
@@ -84,11 +79,11 @@ class RoleBasedAccessControlTests(TestCase):
         messages = FallbackStorage(request)
         setattr(request, '_messages', messages)
 
-    def test_account_lockout_after_4_failed_attempts(self):
-        """Verify account locks on 4th consecutive failed login attempt."""
+    def test_account_lockout_after_5_failed_attempts(self):
+        """Verify account locks on 5th consecutive failed login attempt."""
         from django.contrib.auth.models import AnonymousUser
         
-        # 3 failed attempts
+        # 4 failed attempts
         for i in range(4):
             request = self.factory.post('/auth/login/', {'username': 'patient_test', 'password': 'WrongPassword123!'})
             request.user = AnonymousUser()
@@ -138,75 +133,17 @@ class RoleBasedAccessControlTests(TestCase):
             self.fail("StrongPasswordValidator raised ValidationError unexpectedly on valid password!")
 
 
-class TwoFactorEmailOTPTests(TestCase):
+class DirectAuthenticationTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username='otp_user',
-            email='otp_user@example.com',
+            username='direct_user',
+            email='direct_user@example.com',
             password='Password123!',
-            role=User.Role.PATIENT,
-            email_verified=True
+            role=User.Role.PATIENT
         )
         self.client = Client()
 
-    def test_otp_service_utilities(self):
-        otp = generate_secure_otp()
-        self.assertEqual(len(otp), 6)
-        self.assertTrue(otp.isdigit())
-
-        masked = mask_email_address('john.doe@gmail.com')
-        self.assertEqual(masked, 'jo*****@gmail.com')
-
-    def test_login_generates_2fa_otp(self):
-        res = self.client.post('/auth/login/', {'username': 'otp_user', 'password': 'Password123!'})
-        self.assertEqual(res.status_code, 302)
-        self.assertIn('/auth/verify-otp/', res.url)
-
-        self.user.refresh_from_db()
-        self.assertIsNotNone(self.user.login_otp)
-        self.assertEqual(len(self.user.login_otp), 6)
-        self.assertIsNotNone(self.user.login_otp_expiry)
-
-    def test_2fa_otp_verification_success(self):
-        # Step 1: Login to trigger OTP
-        self.client.post('/auth/login/', {'username': 'otp_user', 'password': 'Password123!'})
-        self.user.refresh_from_db()
-        otp = self.user.login_otp
-
-        # Step 2: Submit valid OTP
-        res = self.client.post('/auth/verify-otp/', {'otp': otp})
+    def test_direct_login_redirects_to_dashboard(self):
+        res = self.client.post('/auth/login/', {'username': 'direct_user', 'password': 'Password123!'})
         self.assertEqual(res.status_code, 302)
         self.assertIn('/auth/dashboard/', res.url)
-
-        self.user.refresh_from_db()
-        self.assertIsNone(self.user.login_otp)
-        self.assertEqual(self.user.failed_login_attempts, 0)
-
-    def test_incorrect_otp_attempts_limit(self):
-        self.client.post('/auth/login/', {'username': 'otp_user', 'password': 'Password123!'})
-        self.user.refresh_from_db()
-
-        # 4 incorrect attempts
-        for _ in range(4):
-            res = self.client.post('/auth/verify-otp/', {'otp': '000000'})
-            self.assertEqual(res.status_code, 200)
-
-        # 5th incorrect attempt -> session cancelled
-        res5 = self.client.post('/auth/verify-otp/', {'otp': '000000'})
-        self.assertEqual(res5.status_code, 302)
-        self.assertIn('/auth/login/', res5.url)
-
-    def test_resend_otp_limit_and_cooldown(self):
-        self.client.post('/auth/login/', {'username': 'otp_user', 'password': 'Password123!'})
-        
-        # Resend 1 immediately (first resend)
-        res1 = self.client.post('/auth/resend-otp/')
-        self.assertEqual(res1.status_code, 302)
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.resend_count, 1)
-
-        # Immediate second resend -> Cooldown warning
-        res2 = self.client.post('/auth/resend-otp/')
-        self.assertEqual(res2.status_code, 302)
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.resend_count, 1)

@@ -39,17 +39,7 @@ class User(AbstractUser):
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     last_login_user_agent = models.TextField(null=True, blank=True)
 
-    # 2FA & Email Verification OTP fields
-    email_verified = models.BooleanField(default=False)
-    email_verification_otp = models.CharField(max_length=6, blank=True, null=True)
-    email_verification_expiry = models.DateTimeField(blank=True, null=True)
-    login_otp = models.CharField(max_length=6, blank=True, null=True)
-    login_otp_expiry = models.DateTimeField(blank=True, null=True)
-    password_reset_otp = models.CharField(max_length=6, blank=True, null=True)
-    password_reset_otp_expiry = models.DateTimeField(blank=True, null=True)
-    otp_attempts = models.IntegerField(default=0)
-    resend_count = models.IntegerField(default=0)
-    last_resend_time = models.DateTimeField(blank=True, null=True)
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
